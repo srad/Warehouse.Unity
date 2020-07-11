@@ -3,8 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEditor;
 using UnityEngine;
-using UnityEngine.Serialization;
-using UnityEngine.UIElements;
 
 public class GenerateWarehouse : MonoBehaviour
 {
@@ -14,7 +12,7 @@ public class GenerateWarehouse : MonoBehaviour
         public T Item { get; set; }
     }
 
-    [Header("Clone Settings")] public GameObject pallet;
+    [Header("Clone Objects")] public GameObject pallet;
     public GameObject shelf;
 
     [Header("Material Settings")] public float pMaterial1 = 0.7f;
@@ -25,27 +23,24 @@ public class GenerateWarehouse : MonoBehaviour
     public Material material2;
     public Material material3;
 
-    [Header("Distance between each gameobject")]
-    public float xOffset;
+    [Header("Distance between each object")]
+    public float xOffset = 1.8f;
 
-    public float zOffset = -1.4f;
-    public float yOffset;
+    public float zOffset = -1.3f;
+    public float yOffset = 0f;
 
-    public float zShelfOffset = 10f;
+    public float zShelfOffset = 11f;
+    public float xShelfOffset = 1.85f;
 
-    [Header("Z Info")] public int zCount = 20;
-    public int zGroupSize = 5;
-    public float zGroupDistance = -.4f;
+    [Header("Z Group")] public int zCount = 18;
+    public int zGroupSize = 7;
+    public float zGroupDistance = -0.7f;
 
-    [Header("X Info")] public int xCount = 2;
+    [Header("X Group")] public int xCount = 6;
     public int xGroupSize = 2;
-    public float xGroupDistance = 3f;
+    public float xGroupDistance = 5f;
 
-    [Header("Probability Intervals")] public float palletRotation = 3f;
-    public float zRange = 0.2f;
-    public float xRange = 0.2f;
-
-    [Header("Probabilities")] public float pDamage = 0.2f;
+    [Header("Damage Probabilities")] public float pDamage = 0.2f;
     public float pBrickMissing = 0.1f;
 
     public float pTopPlankMissing = 0.01f;
@@ -54,8 +49,10 @@ public class GenerateWarehouse : MonoBehaviour
 
     public float pRotationBrick = 0.1f;
     public float pRotationPallet = 0.1f;
-
-    private float Rand() => Random.Range(-1.0f, 1.0f);
+    
+    [Header("Damage Ranges")] public float palletRotation = 2f;
+    public float zRange = 0.05f;
+    public float xRange = 0.1f;
 
     private List<Prob<Material>> _materialProbability;
     private List<Prob<Material>> _sumProbabilities;
@@ -151,7 +148,7 @@ public class GenerateWarehouse : MonoBehaviour
                 }
 
                 zPosition += zOffset;
-                if (z > 0 && z % zGroupSize == 0)
+                if (z % zGroupSize == 0)
                 {
                     var newShelf = Instantiate(shelf);
                     newShelf.transform.position = new Vector3(xPositionShelf, shelf.transform.position.y, zPositionShelf);
@@ -162,7 +159,7 @@ public class GenerateWarehouse : MonoBehaviour
             }
 
             xPosition += xOffset;
-            xPositionShelf += xOffset;
+            xPositionShelf += xShelfOffset;
             if (x % xGroupSize == 0)
             {
                 xPositionShelf += xGroupDistance;
