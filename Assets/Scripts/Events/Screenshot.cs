@@ -18,13 +18,12 @@ public class Screenshot : MonoBehaviour
 
     public GameObject panel;
     public Material labelMaterial;
-    public Material material2;
     public Camera renderCamera;
     public string HideTag;
     public string TargetTag;
 
     private string _screenshotPath;
-    private int ScreenshotCount => Directory.GetFiles(_screenshotPath, "screen*.png").Length;
+    private int ScreenshotCount => Directory.GetFiles(_screenshotPath, "*_0_.png").Length;
     private IEnumerable<GameObject> TargetObjects => GameObject.FindGameObjectsWithTag(TargetTag);
     private IEnumerable<GameObject> HideObjects => GameObject.FindGameObjectsWithTag(HideTag);
 
@@ -60,7 +59,7 @@ public class Screenshot : MonoBehaviour
 
         // 1. First rendering without UI
         panel.gameObject.SetActive(false);
-        StartCoroutine(WaitForEndOfFrameCoroutine("screen_", count));
+        StartCoroutine(WaitForEndOfFrameCoroutine("", count, "_0_"));
         await Task.Delay(50);
 
         foreach (var target in VisibleTargetObjects)
@@ -68,12 +67,13 @@ public class Screenshot : MonoBehaviour
             var objRenderer = target.GetComponent<Renderer>();
             objects.Add(new GameObjectInfo {Material = objRenderer.material, Renderer = objRenderer});
             await Task.Delay(50);
-            objRenderer.materials = new[] {labelMaterial, material2};
+            objRenderer.material = null;
+            objRenderer.materials = new[] {labelMaterial};
             objRenderer.shadowCastingMode = ShadowCastingMode.Off;
             objRenderer.receiveShadows = false;
         }
 
-        StartCoroutine(WaitForEndOfFrameCoroutine("label_", count));
+        StartCoroutine(WaitForEndOfFrameCoroutine("", count, "_1_"));
         await Task.Delay(50);
 
         // Restore original materials
@@ -87,10 +87,10 @@ public class Screenshot : MonoBehaviour
         panel.gameObject.SetActive(true);
     }
 
-    private IEnumerator WaitForEndOfFrameCoroutine(string filename, int index)
+    private IEnumerator WaitForEndOfFrameCoroutine(string filename, int index, string postfix)
     {
         yield return new WaitForEndOfFrame();
-        ScreenCapture.CaptureScreenshot(_screenshotPath + "/" + filename + index.ToString("D4") + ".png");
+        ScreenCapture.CaptureScreenshot(_screenshotPath + "/" + filename + index.ToString("D4") + postfix + ".png");
         //Application.OpenURL("file://" + _screenshotPath);
     }
 
