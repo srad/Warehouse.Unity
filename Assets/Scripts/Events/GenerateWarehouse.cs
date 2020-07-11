@@ -19,6 +19,7 @@ public class GenerateWarehouse : MonoBehaviour
 
     [Header("Distance between each object")]
     public float xOffset = 1.8f;
+
     public float zOffset = -1.6f;
 
     public float zShelfOffset = 11f;
@@ -32,14 +33,16 @@ public class GenerateWarehouse : MonoBehaviour
     public int xGroupSize = 2;
     public float xGroupDistance = 5f;
 
-    [Header("Damage Probabilities")] public float pDamage = 0.25f;
-    public float pBrickMissing = 0.1f;
+    [Header("General Probabilities")] public float pLoaded = 0.8f;
+    public float pDamage = 0.25f;
+
+    [Header("Damage Probabilities")] public float pBrickMissing = 0.1f;
 
     public float pTopPlankMissing = 0.01f;
     public float pMiddlePlankMissing = 0.01f;
     public float pBottomPlankMissing = 0.01f;
 
-    public float pRotationBrick = 0.1f;
+    public float pRotationBrick = 0.15f;
     public float pRotationPallet = 0.1f;
 
     [Header("Damage Ranges")] public float palletRotation = 2f;
@@ -61,9 +64,10 @@ public class GenerateWarehouse : MonoBehaviour
 
         _heightDist = new Distribution<int>()
         {
-            new Element<int> {Item = 3, Probability = 0.7f},
-            new Element<int> {Item = 2, Probability = 0.3f},
-            new Element<int> {Item = 1, Probability = 0.2f}
+            new Element<int> {Item = 4, Probability = 0.5f},
+            new Element<int> {Item = 3, Probability = 0.3f},
+            new Element<int> {Item = 2, Probability = 0.1f},
+            new Element<int> {Item = 1, Probability = 0.1f}
         };
         _heightDist.Init();
     }
@@ -105,6 +109,7 @@ public class GenerateWarehouse : MonoBehaviour
             // -z Direction
             for (var z = 0; z < zCount; z++)
             {
+                var loadPallet = Random.Range(0f, 1f) < pLoaded;
                 var newPallet = Instantiate(pallet);
                 newPallet.transform.position = new Vector3(xPosition, start.y, zPosition);
                 newPallet.transform.Rotate(Vector3.up, Random.Range(-palletRotation, palletRotation));
@@ -144,22 +149,37 @@ public class GenerateWarehouse : MonoBehaviour
                             {
                                 child.gameObject.SetActive(Random.Range(0f, 1.0f) < pBrickMissing);
                             }
+
+                            if (child.name.StartsWith("Pallet.Brick"))
+                            {
+                                if (Random.Range(0f, 1f) < pRotationBrick)
+                                {
+                                    child.transform.RotateAround(child.GetComponent<Renderer>().bounds.center, Vector3.up, Random.Range(-10f, 10f));
+                                }
+                            }
                         }
                     }
 
                     // Box
                     if (child.name.StartsWith("Box.Layer"))
                     {
-                        var layerHeight = BoxToLayer(child.name);
-                        if (layerHeight > height)
+                        if (loadPallet)
+                        {
+                            var layerHeight = BoxToLayer(child.name);
+                            if (layerHeight > height)
+                            {
+                                child.gameObject.SetActive(false);
+                            }
+
+                            // Randomly toggle objects on top most layer
+                            if (layerHeight >= height)
+                            {
+                                child.gameObject.SetActive(Random.Range(0f, 1f) < 0.7f);
+                            }
+                        }
+                        else
                         {
                             child.gameObject.SetActive(false);
-                        }
-
-                        // Randomly toggle objects on top most layer
-                        if (layerHeight == height)
-                        {
-                            child.gameObject.SetActive(Random.Range(0f, 1f) < 0.6f);
                         }
                     }
                 }
