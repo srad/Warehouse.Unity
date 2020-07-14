@@ -29,8 +29,9 @@ public class ForkliftAutomation : MonoBehaviour
         }
     }
 
-    private IEnumerator Capture()
+    private void Capture()
     {
+        /*
         var start = GameObject.FindWithTag("pallet");
         var distance = start.gameObject.GetComponent<Renderer>().bounds.size.x / 2;
 
@@ -48,5 +49,6 @@ public class ForkliftAutomation : MonoBehaviour
 
             yield return new WaitForSeconds(1f);
         }
+        */
     }
 }

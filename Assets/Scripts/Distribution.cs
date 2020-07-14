@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System.Collections;
+using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 
@@ -16,9 +17,19 @@ namespace Events
     /// <typeparam name="T"></typeparam>
     public class Distribution<T> : List<Element<T>>
     {
-        private List<Element<T>> _sumProbabilities;
+        private List<Element<T>> _sumProbabilities = new List<Element<T>>();
 
-        public void Init()
+        public Distribution(IEnumerable<Element<T>> elements)
+        {
+            foreach (var e in elements)
+            {
+                Add(e);
+            }
+
+            Init();
+        }
+
+        private void Init()
         {
             _sumProbabilities = new List<Element<T>>(Count);
 

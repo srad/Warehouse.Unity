@@ -7,6 +7,16 @@ TagManager:
   - pallet
   - box
   - main-pallet
+  - probe
+  - damaged
+  - pallet.type.1
+  - pallet.type.2
+  - pallet.type.3
+  - 0
+  - 1
+  - 2
+  - 3
+  - 4
   layers:
   - Default
   - TransparentFX

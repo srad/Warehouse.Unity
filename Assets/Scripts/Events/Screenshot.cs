@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using UnityEngine;
 using System.IO;
 using System.Linq;
+using DefaultNamespace;
 using UnityEngine.Rendering;
 using Debug = UnityEngine.Debug;
 
@@ -17,8 +18,12 @@ public class Screenshot : MonoBehaviour
         public Material Material;
     }
 
-    [Header("Materials")] public GameObject panel;
-    public Material labelMaterial;
+    [Header("References")] public GameObject panel;
+    public GameObject CollisionProbe;
+
+    [Header("Settings")] public bool useCollisionProbeInsteadAllVisiblePallet;
+
+    [Header("Materials")] public Material labelMaterial;
     public Color brickCornerColor;
     public Color brickSideColor;
     public Color brickCenterColor;
@@ -34,11 +39,15 @@ public class Screenshot : MonoBehaviour
     #region Private
 
     private string _screenshotPath;
-    private string ScreenshotPrefix => Guid.NewGuid().ToString(); //Directory.GetFiles(_screenshotPath, "*_0_.png").Length;
-    private IEnumerable<GameObject> TargetObjects => GameObject.FindGameObjectsWithTag(TargetTag);
+    private static string ScreenshotPrefix => Guid.NewGuid().ToString(); //Directory.GetFiles(_screenshotPath, "*_0_.png").Length;
+    private IEnumerable<GameObject> TargetObjects => true ? CollisionProbe.GetComponent<CollisionProbe>().CollidedPallets.ToArray() : GameObject.FindGameObjectsWithTag(TargetTag);
     private IEnumerable<GameObject> HideObjects => GameObject.FindGameObjectsWithTag(HideTag);
 
-    private bool OutputVisibleRenderers(IEnumerable<Renderer> renderers) => renderers.Any(r => IsVisible(r));
+    private bool OutputVisibleRenderers(IEnumerable<Renderer> renderers) => renderers.Any(r =>
+    {
+        var planes = GeometryUtility.CalculateFrustumPlanes(renderCamera);
+        return GeometryUtility.TestPlanesAABB(planes, r.bounds);
+    });
 
     private IEnumerable<GameObject> VisibleTargetObjects => (from obj in TargetObjects
         let renderers = obj.GetComponentsInChildren<Renderer>()
@@ -46,7 +55,7 @@ public class Screenshot : MonoBehaviour
         select obj).ToList();
 
     /// <summary>
-    /// Create the screenshot folder once the game object is awake.
+    /// Create the screenshot folder.
     /// </summary>
     private void Start()
     {
@@ -64,6 +73,10 @@ public class Screenshot : MonoBehaviour
     /// </summary>
     private IEnumerator WriteScreenshot()
     {
+        //var probe = GameObject.FindGameObjectWithTag("probe").GetComponent<CollisionProbe>();
+        //    Debug.Log(probe.collidedWithPallet);
+        //  Debug.Log(probe.palletTag);
+
         // Retains the original game objects with the original material
         var originalState = new List<GameObjectInfo>();
         var hiddenObjects = new List<GameObject>();
@@ -79,6 +92,7 @@ public class Screenshot : MonoBehaviour
         {
             for (var i = 0; i < target.transform.childCount; i++)
             {
+                Debug.Log(target.transform.GetChild(i).name);
                 if (target.transform.GetChild(i).name.StartsWith("Pallet."))
                 {
                     var child = target.transform.GetChild(i).GetComponent<Renderer>();
@@ -142,21 +156,26 @@ public class Screenshot : MonoBehaviour
         panel.gameObject.SetActive(true);
     }
 
-    private Color GetPartMaterial(string name)
+    /// <summary>
+    /// Return material based on the game object prefix.
+    /// </summary>
+    /// <param name="namePrefix"></param>
+    /// <returns></returns>
+    private Color GetPartMaterial(string namePrefix)
     {
-        if (name.StartsWith("Pallet.Brick.Corner"))
+        if (namePrefix.StartsWith(PalletInfo.Brick.Corner))
             return brickCornerColor;
-        if (name.StartsWith("Pallet.Brick.Side"))
+        if (namePrefix.StartsWith(PalletInfo.Brick.Side))
             return brickSideColor;
-        if (name.StartsWith("Pallet.Brick.Center"))
+        if (namePrefix.StartsWith(PalletInfo.Brick.Center))
             return brickCenterColor;
-        if (name.StartsWith("Pallet.Brick.Front"))
+        if (namePrefix.StartsWith(PalletInfo.Brick.Front))
             return brickFrontColor;
-        if (name.StartsWith("Pallet.Plank.Top"))
+        if (namePrefix.StartsWith(PalletInfo.Plank.Top))
             return plankTopColor;
-        if (name.StartsWith("Pallet.Plank.Bottom"))
+        if (namePrefix.StartsWith(PalletInfo.Plank.Bottom))
             return plankBottomColor;
-        if (name.StartsWith("Pallet.Plank.Middle"))
+        if (namePrefix.StartsWith(PalletInfo.Plank.Middle))
             return plankMiddleColor;
 
         return new Color(0.1f, 0.1f, 0.1f, 1);
@@ -175,12 +194,6 @@ public class Screenshot : MonoBehaviour
         {
             StartCoroutine(WriteScreenshot());
         }
-    }
-
-    private bool IsVisible(Renderer r)
-    {
-        var planes = GeometryUtility.CalculateFrustumPlanes(renderCamera);
-        return GeometryUtility.TestPlanesAABB(planes, r.bounds);
     }
 
     #endregion
