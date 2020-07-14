@@ -92,7 +92,7 @@ public class GenerateWarehouse : MonoBehaviour
 
     private GameObject CreatePallet(Vector3 pos)
     {
-        var newPallet = Instantiate(pallet);
+        var newPallet = Instantiate(pallet, transform.parent);
         newPallet.transform.position = pos;
         newPallet.tag = "pallet";
 
@@ -102,7 +102,7 @@ public class GenerateWarehouse : MonoBehaviour
         newPallet.transform.Translate(0f, 0f, Random.Range(-zRange, zRange));
 
         // Initial tags
-        newPallet.transform.Find(PalletTags.Types.TagType).tag = PalletTags.Pallet.Type1;
+        newPallet.transform.Find(PalletTags.Types.PalletType).tag = PalletTags.Pallet.Type1;
         newPallet.transform.Find(PalletTags.Types.Layers).tag = LoadInfo.NoLoad;
         newPallet.transform.Find(PalletTags.Types.Damage).tag = PalletTags.NoDamage;
 
@@ -115,16 +115,25 @@ public class GenerateWarehouse : MonoBehaviour
         Generate();
     }
 
-    public void Generate()
+    private void DestroyPallets()
     {
-        for (var i = 0; i < transform.childCount; i++)
+        GameObject.Find("CollisionProbe").GetComponent<CollisionProbe>().CollidedPallets.Clear();
+        for (var i = 0; i < transform.parent.childCount; i++)
         {
-            var child = transform.GetChild(i);
+            var child = transform.parent.GetChild(i);
             if (child.CompareTag("pallet"))
             {
-                Destroy(child);
+                Destroy(child.gameObject);
             }
         }
+    }
+
+    public void Generate()
+    {
+        DestroyPallets();
+
+        shelf.SetActive(true);
+        pallet.SetActive(true);
 
         var start = pallet.transform.position;
         var xPosition = start.x;
@@ -252,7 +261,6 @@ public class GenerateWarehouse : MonoBehaviour
                 xPosition += xGroupDistance;
             }
 
-            // Remove the template GameObjects
             shelf.SetActive(false);
             pallet.SetActive(false);
         }

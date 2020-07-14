@@ -17,6 +17,13 @@ TagManager:
   - 2
   - 3
   - 4
+  - brick.front
+  - brick.side
+  - brick.corner
+  - brick.center
+  - plank.top
+  - plank.middle
+  - plank.bottom
   layers:
   - Default
   - TransparentFX

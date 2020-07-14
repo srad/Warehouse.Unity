@@ -4,7 +4,7 @@
     {
         public static class Types
         {
-            public const string TagType = "TagType";
+            public const string PalletType = "TagType";
             public const string Layers = "TagLayers";
             public const string Damage = "TagDamage";
         }

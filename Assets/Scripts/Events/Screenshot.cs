@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Threading.Tasks;
 using UnityEngine;
 using System.IO;
@@ -19,29 +20,33 @@ public class Screenshot : MonoBehaviour
     }
 
     [Header("References")] public GameObject panel;
-    public GameObject CollisionProbe;
-
-    [Header("Settings")] public bool useCollisionProbeInsteadAllVisiblePallet;
-
+    [Header("Settings")] public bool useCollisionProbeInsteadAllVisiblePallet = true;
     [Header("Materials")] public Material labelMaterial;
-    public Color brickCornerColor;
-    public Color brickSideColor;
-    public Color brickCenterColor;
-    public Color brickFrontColor;
-    public Color plankTopColor;
-    public Color plankBottomColor;
-    public Color plankMiddleColor;
+
+    #region colors
+
+    public Color brickCornerColor = new Color(255 / 255f, 115 / 255f, 0);
+    public Color brickSideColor = new Color(255 / 255f, 59 / 255f, 0);
+    public Color brickCenterColor = new Color(255 / 255f, 0, 145 / 255f);
+    public Color brickFrontColor = new Color(172 / 255f, 0, 255 / 255f);
+    public Color plankTopColor = new Color(18 / 255f, 255 / 255f, 0);
+    public Color plankBottomColor = new Color(70 / 255f, 0, 255 / 255f);
+    public Color plankMiddleColor = new Color(0, 253 / 255f, 255 / 255f);
+
+    #endregion
 
     [Header("Setup")] public Camera renderCamera;
-    public string HideTag;
-    public string TargetTag;
+
+    private const string TargetTag = "pallet";
 
     #region Private
 
     private string _screenshotPath;
-    private static string ScreenshotPrefix => Guid.NewGuid().ToString(); //Directory.GetFiles(_screenshotPath, "*_0_.png").Length;
-    private IEnumerable<GameObject> TargetObjects => true ? CollisionProbe.GetComponent<CollisionProbe>().CollidedPallets.ToArray() : GameObject.FindGameObjectsWithTag(TargetTag);
-    private IEnumerable<GameObject> HideObjects => GameObject.FindGameObjectsWithTag(HideTag);
+    private static string ScreenshotPrefix => Guid.NewGuid().ToString();
+
+    private IEnumerable<GameObject> TargetObjects => true
+        ? GameObject.Find("CollisionProbe").GetComponent<CollisionProbe>().CollidedPallets.ToArray()
+        : GameObject.FindGameObjectsWithTag(TargetTag);
 
     private bool OutputVisibleRenderers(IEnumerable<Renderer> renderers) => renderers.Any(r =>
     {
@@ -73,10 +78,6 @@ public class Screenshot : MonoBehaviour
     /// </summary>
     private IEnumerator WriteScreenshot()
     {
-        //var probe = GameObject.FindGameObjectWithTag("probe").GetComponent<CollisionProbe>();
-        //    Debug.Log(probe.collidedWithPallet);
-        //  Debug.Log(probe.palletTag);
-
         // Retains the original game objects with the original material
         var originalState = new List<GameObjectInfo>();
         var hiddenObjects = new List<GameObject>();
@@ -92,7 +93,6 @@ public class Screenshot : MonoBehaviour
         {
             for (var i = 0; i < target.transform.childCount; i++)
             {
-                Debug.Log(target.transform.GetChild(i).name);
                 if (target.transform.GetChild(i).name.StartsWith("Pallet."))
                 {
                     var child = target.transform.GetChild(i).GetComponent<Renderer>();
@@ -128,7 +128,7 @@ public class Screenshot : MonoBehaviour
                     var child = target.transform.GetChild(i).GetComponent<Renderer>();
                     child.material = null;
                     var mat = Instantiate(labelMaterial);
-                    mat.color = GetPartMaterial(name);
+                    mat.color = GetPartColor(child.gameObject);
                     child.materials = new[] {mat};
                     child.shadowCastingMode = ShadowCastingMode.Off;
                     child.receiveShadows = false;
@@ -159,26 +159,26 @@ public class Screenshot : MonoBehaviour
     /// <summary>
     /// Return material based on the game object prefix.
     /// </summary>
-    /// <param name="namePrefix"></param>
+    /// <param name="obj"></param>
     /// <returns></returns>
-    private Color GetPartMaterial(string namePrefix)
+    private Color GetPartColor(GameObject obj)
     {
-        if (namePrefix.StartsWith(PalletInfo.Brick.Corner))
+        if (obj.CompareTag("brick.corner"))
             return brickCornerColor;
-        if (namePrefix.StartsWith(PalletInfo.Brick.Side))
+        if (obj.CompareTag("brick.side"))
             return brickSideColor;
-        if (namePrefix.StartsWith(PalletInfo.Brick.Center))
+        if (obj.CompareTag("brick.center"))
             return brickCenterColor;
-        if (namePrefix.StartsWith(PalletInfo.Brick.Front))
+        if (obj.CompareTag("brick.front"))
             return brickFrontColor;
-        if (namePrefix.StartsWith(PalletInfo.Plank.Top))
+        if (obj.CompareTag("plank.top"))
             return plankTopColor;
-        if (namePrefix.StartsWith(PalletInfo.Plank.Bottom))
+        if (obj.CompareTag("plank.bottom"))
             return plankBottomColor;
-        if (namePrefix.StartsWith(PalletInfo.Plank.Middle))
+        if (obj.CompareTag("plank.middle"))
             return plankMiddleColor;
 
-        return new Color(0.1f, 0.1f, 0.1f, 1);
+        return new Color(255, 255, 255, 255);
     }
 
     private IEnumerator Capture(string filename, string postfix)
@@ -193,6 +193,11 @@ public class Screenshot : MonoBehaviour
         if (Input.GetKeyDown(KeyCode.Space))
         {
             StartCoroutine(WriteScreenshot());
+        }
+
+        if (Input.GetKeyDown(KeyCode.G))
+        {
+            GameObject.Find("Warehouse").GetComponent<GenerateWarehouse>().Generate();
         }
     }
 
