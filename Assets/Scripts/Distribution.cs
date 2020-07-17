@@ -5,21 +5,21 @@ using UnityEngine;
 
 namespace Events
 {
-    public class Element<T>
+    public class Dist<T>
     {
-        public double Probability { get; set; }
-        public T Item { get; set; }
+        public double P { get; set; }
+        public T Element { get; set; }
     }
 
     /// <summary>
     /// Details please see: https://stackoverflow.com/questions/46735106/pick-random-element-from-list-with-probability
     /// </summary>
     /// <typeparam name="T"></typeparam>
-    public class Distribution<T> : List<Element<T>>
+    public class Distribution<T> : List<Dist<T>>
     {
-        private List<Element<T>> _sumProbabilities = new List<Element<T>>();
+        private List<Dist<T>> _sumProbabilities = new List<Dist<T>>();
 
-        public Distribution(IEnumerable<Element<T>> elements)
+        public Distribution(IEnumerable<Dist<T>> elements)
         {
             foreach (var e in elements)
             {
@@ -31,23 +31,23 @@ namespace Events
 
         private void Init()
         {
-            _sumProbabilities = new List<Element<T>>(Count);
+            _sumProbabilities = new List<Dist<T>>(Count);
 
             var sum = 0.0;
 
             foreach (var item in this.Take(Count - 1))
             {
-                sum += item.Probability;
-                _sumProbabilities.Add(new Element<T> {Probability = sum, Item = item.Item});
+                sum += item.P;
+                _sumProbabilities.Add(new Dist<T> {P = sum, Element = item.Element});
             }
 
-            _sumProbabilities.Add(new Element<T> {Probability = 1.0, Item = this.Last().Item});
+            _sumProbabilities.Add(new Dist<T> {P = 1.0, Element = this.Last().Element});
         }
 
         public T Sample()
         {
             var probability = Random.Range(0f, 1f);
-            return _sumProbabilities.SkipWhile(i => i.Probability < probability).First().Item;
+            return _sumProbabilities.SkipWhile(i => i.P < probability).First().Element;
         }
     }
 }

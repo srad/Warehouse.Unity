@@ -45,8 +45,6 @@
             public const string Layer2Prefix = "Box.Layer.2";
             public const string Layer3Prefix = "Box.Layer.3";
             public const string Layer4Prefix = "Box.Layer.4";
-
-            public static int ToInt(string layerName) => int.Parse(layerName.Split('.')[2]);
         }
     }
 }

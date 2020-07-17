@@ -18,13 +18,11 @@ public class ForkliftAutomation : MonoBehaviour
     {
         if (Input.GetKey(KeyCode.Q))
         {
-            Debug.Log("Q");
             transform.Translate(new Vector3(-1.5f * Time.deltaTime, 0, 0), Space.Self);
         }
 
         if (Input.GetKey(KeyCode.E))
         {
-            Debug.Log("Q");
             transform.Translate(new Vector3(1.5f * Time.deltaTime, 0, 0), Space.Self);
         }
     }

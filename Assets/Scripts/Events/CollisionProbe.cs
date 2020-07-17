@@ -1,38 +1,35 @@
-﻿using System;
-using System.Collections;
-using System.Collections.Generic;
-using DefaultNamespace;
+﻿using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 public class CollisionProbe : MonoBehaviour
 {
-    public readonly HashSet<GameObject> CollidedPallets = new HashSet<GameObject>();
+    private readonly List<GameObject> _collidedPallets = new List<GameObject>();
+
+    public int PalletCount => _collidedPallets.Count();
+
+    public GameObject[] Pallets => _collidedPallets.ToArray();
+
+    public void Clear()
+    {
+        _collidedPallets.Clear();
+    }
 
     private void OnTriggerEnter(Collider other)
     {
-        if (CollidedPallets.Contains(other.gameObject))
+        if (other.gameObject.CompareTag("pallet"))
         {
-            return;
-        }
-
-        if (other.gameObject.tag.StartsWith("pallet"))
-        {
-            /*
-            var type = other.transform.Find(TagTypes.Objects.TagType).tag;
-            var height = other.transform.Find(TagTypes.Objects.TagLayers).tag;
-            var hasDamage = other.transform.Find(TagTypes.Objects.TagDamage).tag;
-            */
-            CollidedPallets.Add(other.gameObject);
-            Debug.Log($"Entering: {CollidedPallets.Count}");
+            _collidedPallets.Add(other.gameObject);
+            Debug.Log("Add:" + _collidedPallets.Count());
         }
     }
 
     private void OnTriggerExit(Collider other)
     {
-        if (other.gameObject.tag.StartsWith("pallet") && CollidedPallets.Contains(other.gameObject))
+        if (other.gameObject.CompareTag("pallet"))
         {
-            CollidedPallets.Remove(other.gameObject);
-            Debug.Log($"Leaving: {CollidedPallets.Count}");
+            _collidedPallets.Remove(other.gameObject);
+            Debug.Log("Remove:" + _collidedPallets.Count());
         }
     }
 }

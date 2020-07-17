@@ -24,6 +24,7 @@ TagManager:
   - plank.top
   - plank.middle
   - plank.bottom
+  - shelf
   layers:
   - Default
   - TransparentFX
