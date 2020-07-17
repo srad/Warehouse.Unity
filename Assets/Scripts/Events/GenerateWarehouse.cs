@@ -180,10 +180,10 @@ public class GenerateWarehouse : MonoBehaviour
             // -z Direction
             for (var z = 0; z < zCount; z++)
             {
-                var skipPallet = Random.Range(0f, 1f) < pPalletMissing && missingPallets;
-                if (!skipPallet)
+                for (int i = 0; i < 4; i++)
                 {
-                    for (int i = 0; i < 3; i++)
+                    var skipPallet = Random.Range(0f, 1f) < pPalletMissing && missingPallets;
+                    if (!skipPallet)
                     {
                         var loadPallet = generateLoad && Random.Range(0f, 1f) < pLoaded;
                         // Random ratation
@@ -305,9 +305,9 @@ public class GenerateWarehouse : MonoBehaviour
                 xPositionShelf += xGroupDistance;
                 xPosition += xGroupDistance;
             }
-
-            shelf.SetActive(false);
-            pallet.SetActive(false);
         }
+
+        shelf.SetActive(false);
+        pallet.SetActive(false);
     }
 }
