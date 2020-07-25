@@ -17,6 +17,12 @@ public class GenerateWarehouse : MonoBehaviour
     public bool generateLoad = true;
     public bool missingPallets = true;
 
+    public int zGroupSize = 6;
+    public int xGroupSize = 2;
+    public int yGroupCount = 3;
+
+    public bool makeStatic = false;
+
     [Header("Material Settings")] public float pMaterial1 = 0.7f;
     public float pMaterial2 = 0.2f;
     public float pMaterial3 = 0.1f;
@@ -34,11 +40,9 @@ public class GenerateWarehouse : MonoBehaviour
     public float xShelfOffset = 1.85f;
 
     [Header("Z Group")] public int zCount = 18;
-    public int zGroupSize = 6;
     public float zGroupDistance = -0.8f;
 
     [Header("X Group")] public int xCount = 6;
-    public int xGroupSize = 2;
     public float xGroupDistance = 5f;
 
     [Header("General Probabilities")] public float pLoaded = 0.8f;
@@ -180,7 +184,7 @@ public class GenerateWarehouse : MonoBehaviour
             // -z Direction
             for (var z = 0; z < zCount; z++)
             {
-                for (int i = 0; i < 4; i++)
+                for (int y = 0; y < yGroupCount; y++)
                 {
                     var skipPallet = Random.Range(0f, 1f) < pPalletMissing && missingPallets;
                     if (!skipPallet)
@@ -190,7 +194,8 @@ public class GenerateWarehouse : MonoBehaviour
                         var rotSample = _distBoxRotation.Sample();
                         var rot = loadPallet ? rotSample + Random.Range(-5f, 5f) : 0;
 
-                        var newPallet = CreatePallet(new Vector3(xPosition, start.y + i * 2.6f, zPosition));
+                        var newPallet = CreatePallet(new Vector3(xPosition, start.y + y * 2.6f, zPosition));
+                        newPallet.isStatic = makeStatic;
 
                         var mat = _distMaterial.Sample();
 
@@ -205,6 +210,7 @@ public class GenerateWarehouse : MonoBehaviour
                             var child = newPallet.transform.GetChild(j);
                             if (child.name.StartsWith("Pallet."))
                             {
+                                child.gameObject.isStatic = makeStatic;
                                 // Assign material to all parts
                                 var m = Instantiate(mat);
                                 // Vary surface grain/texture
@@ -264,7 +270,7 @@ public class GenerateWarehouse : MonoBehaviour
                             {
                                 if (loadPallet)
                                 {
-                                    child.transform.RotateAround(child.GetChild(0).GetComponent<Renderer>().bounds.center, Vector3.up, rot);
+                                    child.transform.RotateAround(child.GetComponent<Renderer>().bounds.center, Vector3.up, rot);
                                     var layerHeight = int.Parse(child.tag);
                                     if (layerHeight > height)
                                     {
