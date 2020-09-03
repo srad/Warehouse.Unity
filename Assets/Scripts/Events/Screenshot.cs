@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using UnityEngine;
 using System.IO;
 using System.Linq;
-using System.Threading;
 using DefaultNamespace;
 using UnityEngine.Rendering;
 
@@ -33,11 +32,14 @@ public class Screenshot : MonoBehaviour
     public Color plankBottomColor = new Color(70 / 255f, 0, 255 / 255f);
     public Color boxColor;
 
+    private GenerateWarehouse _generator;
+
     #endregion
 
     [Header("Setup")] public Camera renderCamera;
 
     private const string TargetTag = "pallet";
+    public float screenshotDelay = 2.0f;
 
     #region Private
 
@@ -48,7 +50,7 @@ public class Screenshot : MonoBehaviour
     /// Either take the object which do collide with the collisionProbe geometry in front of
     /// the forklift, or take all visible pallets. First one is preferred for annotations.
     /// </summary>
-    private static IEnumerable<GameObject> TargetObjects => true
+    private static IEnumerable<GameObject> TargetObjects => false
         ? GameObject.Find("CollisionProbe").GetComponent<CollisionProbe>().Pallets
         : GameObject.FindGameObjectsWithTag(TargetTag);
 
@@ -73,13 +75,16 @@ public class Screenshot : MonoBehaviour
         {
             Directory.CreateDirectory(_screenshotPath);
         }
+
+        _generator = GameObject.Find("Warehouse").GetComponent<GenerateWarehouse>();
     }
 
     private IEnumerator AutoCapture()
     {
+        yield return new WaitForEndOfFrame();
         yield return WriteScreenshot();
         yield return new WaitForEndOfFrame();
-        GameObject.Find("Warehouse").GetComponent<GenerateWarehouse>().Generate();
+        _generator.Generate();
         yield return new WaitForEndOfFrame();
     }
 
@@ -108,9 +113,9 @@ public class Screenshot : MonoBehaviour
             {
                 var child = target.transform.GetChild(i);
                 var isBox = child.name.StartsWith(PalletInfo.Box.Prefix);
-                if (child.name.StartsWith("Pallet.") || isBox)
+                if (child.name.StartsWith("Pallet.") && !isBox)
                 {
-                    var r = isBox ? child.GetChild(0).GetComponent<Renderer>() : child.GetComponent<Renderer>();
+                    var r = child.GetComponent<Renderer>();
                     targetStates.Add(new GameObjectInfo {Material = new Material(r.material), Renderer = r, Child = child});
 
                     r.material = null;
@@ -226,8 +231,8 @@ public class Screenshot : MonoBehaviour
         File.WriteAllBytes(localUrl, bytes);
     }
 
-    private float dT = 0;
-    private bool startCapture = false;
+    private float _dT = 0;
+    private bool _startCapture = false;
 
     private void Update()
     {
@@ -238,31 +243,45 @@ public class Screenshot : MonoBehaviour
 
         if (Input.GetKeyDown(KeyCode.G))
         {
-            GameObject.Find("Warehouse").GetComponent<GenerateWarehouse>().Generate();
+            _generator.Generate();
+        }
+
+        if (Input.GetKeyDown(KeyCode.M))
+        {
+            _generator.missingPallets = !_generator.missingPallets;
+        }
+
+        if (Input.GetKeyDown(KeyCode.L))
+        {
+            _generator.generateLoad = !_generator.generateLoad;
+        }
+
+        if (Input.GetKeyDown(KeyCode.K))
+        {
+            _generator.applyDamage = !_generator.applyDamage;
         }
 
         if (Input.GetKeyDown(KeyCode.V))
         {
-            startCapture = true;
+            _dT = 0;
+            _startCapture = true;
         }
 
         if (Input.GetKeyDown(KeyCode.B))
         {
-            startCapture = false;
+            _startCapture = false;
         }
 
-        if (startCapture)
+        if (_startCapture)
         {
-            if (dT > 3)
+            if (_dT > screenshotDelay)
             {
-                dT = 0;
+                _dT = 0;
                 StartCoroutine(AutoCapture());
             }
 
-            dT += Time.deltaTime;
+            _dT += Time.deltaTime;
         }
-
-        dT += Time.deltaTime;
     }
 
     #endregion

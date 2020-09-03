@@ -10,6 +10,9 @@ using Random = UnityEngine.Random;
 
 public class GenerateWarehouse : MonoBehaviour
 {
+    [Header("References")] public GameObject forkLift;
+    private Transform _forkliftTransform;
+
     [Header("Clone Objects")] public GameObject pallet;
     public GameObject shelf;
 
@@ -146,26 +149,27 @@ public class GenerateWarehouse : MonoBehaviour
     {
         DefDistributions();
         Screen.SetResolution(1024, 768, false);
+        _forkliftTransform = Instantiate(forkLift.transform);
         Generate();
     }
 
     private void DestroyPallets()
     {
-        for (var i = 0; i < transform.parent.childCount; i++)
+        var objs = GameObject.FindGameObjectsWithTag("pallet")
+            .Concat(GameObject.FindGameObjectsWithTag("shelf"));
+
+        foreach (var obj in objs)
         {
-            var child = transform.parent.GetChild(i);
-            if (child.CompareTag("pallet") || child.CompareTag("shelf"))
-            {
-                // Maybe workaround, because OnTriggerExit is not executed on the CollisionProbe when Detroy() is called
-                //child.transform.Translate(0, -100, 0);
-                //yield return new WaitForEndOfFrame();
-                Destroy(child.gameObject);
-            }
+            Destroy(obj.gameObject);
         }
     }
 
     public void Generate()
     {
+        // forkLift.transform.position = _forkliftTransform.position;
+        // forkLift.transform.rotation = _forkliftTransform.rotation;
+        //forkLift.transform.Translate(Random.Range(-2f, 2f) * Time.deltaTime, 0, 0);
+
         DestroyPallets();
 
         shelf.SetActive(true);

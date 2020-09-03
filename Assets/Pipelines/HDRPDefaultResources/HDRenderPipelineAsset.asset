@@ -228,7 +228,7 @@ MonoBehaviour:
       cubeCookieTexArraySize: 16
       cookieAtlasLastValidMip: 0
       cookieTexArraySize: 1
-      planarReflectionAtlasSize: 1024
+      planarReflectionAtlasSize: 4096
       reflectionProbeCacheSize: 64
       reflectionCubemapSize: 256
       reflectionCacheCompressed: 0
@@ -245,7 +245,7 @@ MonoBehaviour:
       maxDecalsOnScreen: 512
       maxPlanarReflectionOnScreen: 16
     hdShadowInitParams:
-      maxShadowRequests: 512
+      maxShadowRequests: 1024
       directionalShadowsDepthBits: 32
       shadowFilteringQuality: 1
       punctualLightShadowAtlas:
@@ -335,9 +335,9 @@ MonoBehaviour:
     lightingQualitySettings:
       AOStepCount: 040000000600000010000000
       AOFullRes: 000001
-      AOMaximumRadiusPixels: 200000002800000050000000
+      AOMaximumRadiusPixels: 200000002800000064000000
       AOBilateralUpsample: 000101
-      AODirectionCount: 010000000200000004000000
+      AODirectionCount: 010000000200000010000000
       ContactShadowSampleCount: 060000000a00000010000000
       SSRMaxRaySteps: 100000002000000040000000
   allowShaderVariantStripping: 1

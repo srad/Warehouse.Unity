@@ -6,7 +6,7 @@ public class CollisionProbe : MonoBehaviour
 {
     private readonly List<GameObject> _collidedPallets = new List<GameObject>();
 
-    public int PalletCount => _collidedPallets.Count();
+    public int PalletCount => _collidedPallets.Count;
 
     public GameObject[] Pallets => _collidedPallets.ToArray();
 
@@ -17,19 +17,19 @@ public class CollisionProbe : MonoBehaviour
 
     private void OnTriggerEnter(Collider other)
     {
-        if (other.gameObject.CompareTag("pallet"))
-        {
-            _collidedPallets.Add(other.gameObject);
-            Debug.Log("Add:" + _collidedPallets.Count());
-        }
+        //if (other.gameObject.CompareTag("pallet"))
+        //{
+        //    _collidedPallets.Add(other.gameObject);
+        //    Debug.Log("Add:" + _collidedPallets.Count());
+        //}
     }
 
     private void OnTriggerExit(Collider other)
     {
-        if (other.gameObject.CompareTag("pallet"))
-        {
-            _collidedPallets.Remove(other.gameObject);
-            Debug.Log("Remove:" + _collidedPallets.Count());
-        }
+        //if (other.gameObject.CompareTag("pallet"))
+        //{
+        //    _collidedPallets.Remove(other.gameObject);
+        //    Debug.Log("Remove:" + _collidedPallets.Count());
+        //}
     }
 }
