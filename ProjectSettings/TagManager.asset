@@ -25,6 +25,9 @@ TagManager:
   - plank.middle
   - plank.bottom
   - shelf
+  - label.front
+  - load.1
+  - load.0
   layers:
   - Default
   - TransparentFX

@@ -11,7 +11,6 @@ using Random = UnityEngine.Random;
 public class GenerateWarehouse : MonoBehaviour
 {
     [Header("References")] public GameObject forkLift;
-    private Transform _forkliftTransform;
 
     [Header("Clone Objects")] public GameObject pallet;
     public GameObject shelf;
@@ -67,7 +66,8 @@ public class GenerateWarehouse : MonoBehaviour
 
     private Distribution<Material> _distMaterial;
     private Distribution<int> _distStackHeight;
-    private Distribution<string> _distBrickDamage;
+    private Distribution<string> _distBrickRotated;
+    private Distribution<string> _distBrickMissing;
     private Distribution<string> _distPlankDamage;
     private Distribution<string> _distQualityClass;
     private Distribution<int> _distBoxRotation;
@@ -79,6 +79,9 @@ public class GenerateWarehouse : MonoBehaviour
     /// </summary>
     private void DefDistributions()
     {
+        // 1. Best guess (P) + add another free parameter Theta (measure) for each Distribution
+        // 2. Oder aus Daten "Best Guess" extrahieren
+
         _distMaterial = new Distribution<Material>(new[]
         {
             new Dist<Material> {Element = material1, P = pMaterial1},
@@ -88,16 +91,15 @@ public class GenerateWarehouse : MonoBehaviour
 
         _distStackHeight = new Distribution<int>(new[]
         {
-            new Dist<int> {Element = 4, P = 0.2f},
+            new Dist<int> {Element = 4, P = 0.3f},
             new Dist<int> {Element = 3, P = 0.4f},
             new Dist<int> {Element = 2, P = 0.2f},
             new Dist<int> {Element = 1, P = 0.1f},
-            new Dist<int> {Element = 0, P = 0.1f}
         });
 
         _distQualityClass = new Distribution<string>(new[]
         {
-            new Dist<string> {Element = "new", P = 0.1f},
+            new Dist<string> {Element = "new", P = 0.1f /*, Theta=...*/},
             new Dist<string> {Element = "A", P = 0.35f},
             new Dist<string> {Element = "B", P = 0.35f},
             new Dist<string> {Element = "C", P = 0.1f},
@@ -111,10 +113,17 @@ public class GenerateWarehouse : MonoBehaviour
             new Dist<string> {Element = PalletInfo.Plank.Bottom, P = 0.6f},
         });
 
-        _distBrickDamage = new Distribution<string>(new[]
+        _distBrickRotated = new Distribution<string>(new[]
         {
-            new Dist<string> {Element = PalletInfo.Brick.Corner, P = 0.1f},
-            new Dist<string> {Element = PalletInfo.Brick.Side, P = 0.2f},
+            new Dist<string> {Element = PalletInfo.Brick.Corner, P = 0.4f},
+            new Dist<string> {Element = PalletInfo.Brick.Side, P = 0.1f},
+            new Dist<string> {Element = PalletInfo.Brick.Front, P = 0.5f},
+        });
+
+        _distBrickMissing = new Distribution<string>(new[]
+        {
+            new Dist<string> {Element = PalletInfo.Brick.Corner, P = 0.3f},
+            new Dist<string> {Element = PalletInfo.Brick.Side, P = 0.1f},
             new Dist<string> {Element = PalletInfo.Brick.Front, P = 0.6f},
         });
 
@@ -126,30 +135,33 @@ public class GenerateWarehouse : MonoBehaviour
         });
     }
 
-    private GameObject CreatePallet(Vector3 pos)
+    private GameObject CreatePallet(Vector3 pos, bool load = false)
     {
-        var newPallet = Instantiate(pallet, transform.parent);
-        newPallet.transform.position = pos;
-        newPallet.tag = "pallet";
+        var p = Instantiate(pallet, transform.parent);
+        p.transform.position = pos;
+        p.tag = "pallet";
 
         // Basic variations
-        newPallet.transform.Rotate(Vector3.up, Random.Range(-palletRotation, palletRotation));
-        newPallet.transform.Translate(Random.Range(-xRange, xRange), 0f, 0f);
-        newPallet.transform.Translate(0f, 0f, Random.Range(-zRange, zRange));
+        p.transform.Rotate(Vector3.up, Random.Range(-palletRotation, palletRotation));
+        p.transform.Translate(Random.Range(-xRange, xRange), 0f, 0f);
+        p.transform.Translate(0f, 0f, Random.Range(-zRange, zRange));
 
         // Initial tags
-        newPallet.transform.Find(PalletTags.Types.PalletType).tag = PalletTags.Pallet.Type1;
-        newPallet.transform.Find(PalletTags.Types.Layers).tag = LoadInfo.NoLoad;
-        newPallet.transform.Find(PalletTags.Types.Damage).tag = PalletTags.NoDamage;
+        p.transform.Find(PalletTags.Types.PalletType).tag = PalletTags.Pallet.Type1;
+        p.transform.Find(PalletTags.Types.Layers).tag = LoadInfo.NoLoad;
+        p.transform.Find(PalletTags.Types.Damage).tag = PalletTags.NoDamage;
+        p.transform.Find(PalletTags.Types.Load).tag = load ? PalletTags.Load : PalletTags.NoLoad;
 
-        return newPallet;
+        return p;
     }
+
+    private CollisionProbe _probe;
 
     public void Start()
     {
         DefDistributions();
         Screen.SetResolution(1024, 768, false);
-        _forkliftTransform = Instantiate(forkLift.transform);
+        _probe = forkLift.transform.Find("CollisionProbe").GetComponent<CollisionProbe>();
         Generate();
     }
 
@@ -160,12 +172,14 @@ public class GenerateWarehouse : MonoBehaviour
 
         foreach (var obj in objs)
         {
+            obj.transform.parent = null;
             Destroy(obj.gameObject);
         }
     }
 
     public void Generate()
     {
+        _probe.Clear();
         // forkLift.transform.position = _forkliftTransform.position;
         // forkLift.transform.rotation = _forkliftTransform.rotation;
         //forkLift.transform.Translate(Random.Range(-2f, 2f) * Time.deltaTime, 0, 0);
@@ -188,109 +202,138 @@ public class GenerateWarehouse : MonoBehaviour
             // -z Direction
             for (var z = 0; z < zCount; z++)
             {
-                for (int y = 0; y < yGroupCount; y++)
+                for (var y = 0; y < yGroupCount; y++)
                 {
                     var skipPallet = Random.Range(0f, 1f) < pPalletMissing && missingPallets;
-                    if (!skipPallet)
+                    if (skipPallet)
                     {
-                        var loadPallet = generateLoad && Random.Range(0f, 1f) < pLoaded;
-                        // Random ratation
-                        var rotSample = _distBoxRotation.Sample();
-                        var rot = loadPallet ? rotSample + Random.Range(-5f, 5f) : 0;
+                        continue;
+                    }
 
-                        var newPallet = CreatePallet(new Vector3(xPosition, start.y + y * 2.6f, zPosition));
-                        newPallet.isStatic = makeStatic;
+                    // Even when we shall load, the user defines with which probability
+                    var loadPallet = generateLoad && (Random.Range(0f, 1f) < pLoaded);
 
-                        var mat = _distMaterial.Sample();
+                    // Random rotation
+                    var rotSample = _distBoxRotation.Sample();
+                    var rot = loadPallet ? rotSample + Random.Range(-5f, 5f) : 0;
 
-                        // Assign the height to the object
-                        var height = generateLoad ? _distStackHeight.Sample() : 0;
-                        newPallet.transform.Find(PalletTags.Types.Layers).tag = Convert.ToString(height);
+                    var newPallet = CreatePallet(new Vector3(xPosition, start.y + y * 2.6f, zPosition), loadPallet);
+                    newPallet.isStatic = makeStatic;
 
-                        // Traverse children, planks, bricks, etc.
-                        for (var j = 0; j < newPallet.transform.childCount; j++)
+                    var mat = _distMaterial.Sample();
+
+                    // Assign the height to the object
+                    // Sample: always returns > 0
+                    var height = loadPallet ? _distStackHeight.Sample() : 0;
+                    newPallet.transform.Find(PalletTags.Types.Layers).tag = Convert.ToString(height);
+
+                    // Traverse children, planks, bricks, etc.
+                    var makeDamage = (pDamage > Random.Range(0f, 1f)) && applyDamage;
+                    var damageCount = 0;
+                    for (var j = 0; j < newPallet.transform.childCount; j++)
+                    {
+                        // Pallet
+                        var child = newPallet.transform.GetChild(j);
+                        if (child.name.StartsWith("Pallet."))
                         {
-                            // Pallet
-                            var child = newPallet.transform.GetChild(j);
-                            if (child.name.StartsWith("Pallet."))
+                            child.gameObject.isStatic = makeStatic;
+
+                            // Assign material to all parts
+                            var m = Instantiate(mat);
+                            // Vary surface grain/texture
+                            m.mainTextureOffset = new Vector2(Random.Range(-100f, 100f), Random.Range(-100f, 100f));
+
+                            // TODO: Also take other wood normal maps (look also at images from pallets)
+                            m.SetTextureOffset("_NormalMap", new Vector2(Random.Range(-50f, 50f), Random.Range(-100f, 100f)));
+                            m.SetFloat("_NormalScale", Random.Range(0.1f, 1.5f));
+
+                            child.GetComponent<Renderer>().material = m;
+
+                            // Damage
+                            if (makeDamage)
                             {
-                                child.gameObject.isStatic = makeStatic;
-                                // Assign material to all parts
-                                var m = Instantiate(mat);
-                                // Vary surface grain/texture
-                                m.mainTextureOffset = new Vector2(Random.Range(-100f, 100f), Random.Range(-50f, 50f));
-                                child.GetComponent<Renderer>().material = m;
-
-                                var appliedDamage = false;
-                                // Damage
-                                var makeDamage = (Random.Range(0f, 1f) > pDamage) && applyDamage;
-                                if (makeDamage)
+                                if (child.name.StartsWith(PalletInfo.Plank.Top) && Random.Range(0f, 1.0f) < pTopPlankMissing)
                                 {
-                                    // Destruction
-                                    if (child.name.StartsWith(PalletInfo.Plank.Top) && Random.Range(0f, 1.0f) < pTopPlankMissing)
+                                    Destroy(child.gameObject);
+                                    damageCount++;
+                                }
+
+                                if (child.name.StartsWith(PalletInfo.Plank.Middle) && Random.Range(0f, 1.0f) < pMiddlePlankMissing)
+                                {
+                                    Destroy(child.gameObject);
+                                    damageCount++;
+                                }
+
+                                if (child.name.StartsWith(PalletInfo.Plank.Bottom) && Random.Range(0f, 1.0f) < pBottomPlankMissing)
+                                {
+                                    Destroy(child.gameObject);
+                                    damageCount++;
+                                }
+
+                                if (child.name.StartsWith(PalletInfo.Brick.Prefix) && Random.Range(0f, 1.0f) < pBrickMissing)
+                                {
+                                    var brick = _distBrickMissing.Sample();
+                                    if (child.name.StartsWith(brick))
                                     {
                                         Destroy(child.gameObject);
-                                        appliedDamage = true;
+                                        damageCount++;
+                                    }
+                                }
+
+                                // Modification
+                                if (child.name.StartsWith(PalletInfo.Brick.Prefix) && Random.Range(0f, 1.0f) < pRotationBrick)
+                                {
+                                    var brick = _distBrickRotated.Sample();
+                                    if (child.name.StartsWith(brick))
+                                    {
+                                        child.transform.RotateAround(child.GetComponent<Renderer>().bounds.center, Vector3.up, Random.Range(-20f, 20f));
                                     }
 
-                                    else if (child.name.StartsWith(PalletInfo.Plank.Middle) && Random.Range(0f, 1.0f) < pMiddlePlankMissing)
-                                    {
-                                        Destroy(child.gameObject);
-                                        appliedDamage = true;
-                                    }
-
-                                    else if (child.name.StartsWith(PalletInfo.Plank.Bottom) && Random.Range(0f, 1.0f) < pBottomPlankMissing)
-                                    {
-                                        Destroy(child.gameObject);
-                                        appliedDamage = true;
-                                    }
-
-                                    else if (child.name.StartsWith(PalletInfo.Brick.Prefix) && Random.Range(0f, 1.0f) < pBrickMissing)
-                                    {
-                                        Destroy(child.gameObject);
-                                        appliedDamage = true;
-                                    }
-
-                                    // Modification
-                                    else if (child.name.StartsWith(PalletInfo.Brick.Prefix) && Random.Range(0f, 1.0f) < pBrickDamage)
-                                    {
-                                        var brick = _distBrickDamage.Sample();
-                                        if (child.name.StartsWith(brick))
-                                        {
-                                            child.transform.RotateAround(child.GetComponent<Renderer>().bounds.center, Vector3.up, Random.Range(-20f, 20f));
-                                            appliedDamage = true;
-                                        }
-                                    }
-
-                                    if (appliedDamage)
-                                    {
-                                        newPallet.transform.Find(PalletTags.Types.Damage).tag = PalletTags.Damaged;
-                                    }
+                                    damageCount++;
                                 }
                             }
+                        }
 
-                            // Box
-                            if (child.name.StartsWith(PalletInfo.Box.Prefix))
+                        // Box
+                        if (child.name.StartsWith(PalletInfo.Box.Prefix))
+                        {
+                            if (loadPallet)
                             {
-                                if (loadPallet)
-                                {
-                                    child.transform.RotateAround(child.GetComponent<Renderer>().bounds.center, Vector3.up, rot);
-                                    var layerHeight = int.Parse(child.tag);
-                                    if (layerHeight > height)
-                                    {
-                                        Destroy(child.gameObject);
-                                    }
-
-                                    // Randomly toggle objects on top most layer
-                                    if (layerHeight == height)
-                                    {
-                                        child.gameObject.SetActive(Random.Range(0f, 1f) < 0.5f);
-                                    }
-                                }
-                                else
+                                child.transform.RotateAround(child.GetComponent<Renderer>().bounds.center, Vector3.up, rot);
+                                var layerHeight = int.Parse(child.tag);
+                                if (layerHeight > height)
                                 {
                                     Destroy(child.gameObject);
                                 }
+
+                                // Randomly toggle objects on top most layer
+                                // Todo: guarantee that top most layer has at least one box (to satisfy the sample for height)
+                                if (layerHeight == height)
+                                {
+                                    child.gameObject.SetActive(Random.Range(0f, 1f) < 0.5f);
+                                }
+                            }
+                            else
+                            {
+                                Destroy(child.gameObject);
+                            }
+                        }
+                    }
+
+                    if (damageCount > 0)
+                    {
+                        newPallet.transform.Find(PalletTags.Types.Damage).tag = PalletTags.Damaged;
+                        // Apply darkening to damaged pallets
+                        for (var j = 0; j < newPallet.transform.childCount; j++)
+                        {
+                            var child = newPallet.transform.GetChild(j);
+                            if (child.name.StartsWith("Pallet."))
+                            {
+                                var childMat = child.GetComponent<Renderer>().material;
+                                // Linearly darken with the number of damages
+                                var factor = Mathf.Max(0f, 1f - damageCount / 10f);
+                                var c = new Color(childMat.color.r * factor, childMat.color.g * factor, childMat.color.b * factor);
+                                mat.SetColor("_BaseColor", c);
                             }
                         }
                     }

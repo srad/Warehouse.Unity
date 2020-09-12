@@ -16,8 +16,19 @@ public class Screenshot : MonoBehaviour
         public Transform Child;
     }
 
+
     [Header("References")] public GameObject panel;
+    public GameObject forkLift;
+    public Volume volume;
+
+    private CollisionProbe _forkliftProbe;
+    private GrayScale _gray;
+
+    public GameObject frontLabel;
     //[Header("Settings")] public bool useCollisionProbeInsteadAllVisiblePallet = true;
+
+    [Header("Captures")] public bool captureWholePallet = false;
+    public bool captureEachPart = false;
 
     #region Annotation colors
 
@@ -36,10 +47,10 @@ public class Screenshot : MonoBehaviour
 
     #endregion
 
-    [Header("Setup")] public Camera renderCamera;
+    [Header("Setup")] public List<Camera> cams;
 
     private const string TargetTag = "pallet";
-    public float screenshotDelay = 2.0f;
+    public float screenshotDelay = 3.0f;
 
     #region Private
 
@@ -49,21 +60,33 @@ public class Screenshot : MonoBehaviour
     /// <summary>
     /// Either take the object which do collide with the collisionProbe geometry in front of
     /// the forklift, or take all visible pallets. First one is preferred for annotations.
+    /// TODO: Change to ray casting from camera into scene, if only the front pallet shall be recognized
     /// </summary>
-    private static IEnumerable<GameObject> TargetObjects => false
-        ? GameObject.Find("CollisionProbe").GetComponent<CollisionProbe>().Pallets
+    private IEnumerable<GameObject> TargetObjects => true
+        ? _forkliftProbe.Pallets
         : GameObject.FindGameObjectsWithTag(TargetTag);
 
-    private bool OutputVisibleRenderers(IEnumerable<Renderer> renderers) => renderers.Any(r =>
+    private bool OutputVisibleRenderers(IEnumerable<Renderer> renderers, Camera cam) => renderers.Any(r =>
     {
-        var planes = GeometryUtility.CalculateFrustumPlanes(renderCamera);
+        var planes = GeometryUtility.CalculateFrustumPlanes(cam);
         return GeometryUtility.TestPlanesAABB(planes, r.bounds);
     });
 
-    private IEnumerable<GameObject> VisibleTargetObjects => (from obj in TargetObjects
+    private IEnumerable<GameObject> VisibleTargetObjects(Camera cam) => (from obj in TargetObjects
         let renderers = obj.GetComponentsInChildren<Renderer>()
-        where OutputVisibleRenderers(renderers)
+        where OutputVisibleRenderers(renderers, cam)
         select obj).ToArray();
+
+    private IEnumerable<GameObject> VisibleObjects()
+    {
+        var targets = new List<GameObject>();
+        foreach (var cam in cams)
+        {
+            targets.AddRange(VisibleTargetObjects(cam));
+        }
+
+        return targets;
+    }
 
     /// <summary>
     /// Create the screenshot folder.
@@ -76,6 +99,8 @@ public class Screenshot : MonoBehaviour
             Directory.CreateDirectory(_screenshotPath);
         }
 
+        volume.profile.TryGet(out _gray);
+        _forkliftProbe = forkLift.transform.Find("CollisionProbe").GetComponent<CollisionProbe>();
         _generator = GameObject.Find("Warehouse").GetComponent<GenerateWarehouse>();
     }
 
@@ -85,7 +110,6 @@ public class Screenshot : MonoBehaviour
         yield return WriteScreenshot();
         yield return new WaitForEndOfFrame();
         _generator.Generate();
-        yield return new WaitForEndOfFrame();
     }
 
     /// <summary>
@@ -96,66 +120,120 @@ public class Screenshot : MonoBehaviour
     private IEnumerator WriteScreenshot()
     {
         // Retains the original game objects with the original material
-        var targetStates = new List<GameObjectInfo>();
+        var targetObjects = new List<GameObjectInfo>();
         var hiddenObjects = new List<GameObject>();
         var filename = ScreenshotPrefix;
-        var targets = VisibleTargetObjects.ToArray();
-        string palletLoaded = "0"; //TargetObjects.Any() ? TargetObjects.First().gameObject.transform.Find(PalletTags.Types.Layers).tag : "0";
-        // 1. First rendering without UI
-        panel.gameObject.SetActive(false);
-        yield return StartCoroutine(TakeScreenshot(filename, $"_0_{targets.Count()}_{palletLoaded}"));
-        yield return new WaitForEndOfFrame();
+        var targets = VisibleObjects();
+        string palletLoaded = "0"; //VisibleTargetObjects.First().transform.Find(PalletTags.Types.Load).tag;
 
-        // 2. Label entire pallet with one material
+        // ------------------- Start Annotation -------------------
+
+        // 0. First rendering without UI
+        //panel.gameObject.SetActive(false);
+        for (var i = 0; i < cams.Count; i++)
+        {
+            yield return StartCoroutine(TakeScreenshot(filename, $"_0_{palletLoaded}_cam{i}", cams[i]));
+        }
+
+        // 1. Annotate front of pallet with a label
         foreach (var target in targets)
         {
+            // Show front annotation
             for (var i = 0; i < target.transform.childCount; i++)
             {
                 var child = target.transform.GetChild(i);
-                var isBox = child.name.StartsWith(PalletInfo.Box.Prefix);
-                if (child.name.StartsWith("Pallet.") && !isBox)
+                if (child.name.StartsWith("Annotation.Front"))
                 {
-                    var r = child.GetComponent<Renderer>();
-                    targetStates.Add(new GameObjectInfo {Material = new Material(r.material), Renderer = r, Child = child});
-
-                    r.material = null;
-                    r.materials = new[] {labelMaterial};
-                    r.shadowCastingMode = ShadowCastingMode.Off;
-                    r.receiveShadows = false;
+                    child.gameObject.SetActive(true);
                 }
-                // Hide non essential parts
-                else if (target.transform.GetChild(i).name.Equals("Pallet"))
+            }
+        }
+
+        //_gray.intensity.value = 1;
+
+        for (var i = 0; i < cams.Count; i++)
+        {
+            yield return StartCoroutine(TakeScreenshot(filename, $"_1_{palletLoaded}_cam{i}", cams[i]));
+        }
+
+        // Hide front annotation again
+        foreach (var target in targets)
+        {
+            // Show front annotation
+            for (var i = 0; i < target.transform.childCount; i++)
+            {
+                var child = target.transform.GetChild(i);
+                if (child.name.StartsWith("Annotation.Front"))
                 {
-                    hiddenObjects.Add(child.gameObject);
                     child.gameObject.SetActive(false);
                 }
             }
         }
 
-        yield return new WaitForEndOfFrame();
-        yield return StartCoroutine(TakeScreenshot(filename, $"_1_{targets.Count()}_{palletLoaded}"));
-        yield return new WaitForEndOfFrame();
+        //_gray.intensity.value = 0;
 
-        // 3. Label each part with different color
-        targetStates.ForEach(info =>
+        if (captureWholePallet)
         {
-            var name = info.Child.name;
-            var isBox = info.Child.name.StartsWith(PalletInfo.Box.Prefix);
-            if (name.StartsWith("Pallet.") || isBox)
-            {
-                info.Renderer.material = null;
-                var mat = Instantiate(labelMaterial);
-                mat.color = GetPartColor(info.Renderer.gameObject);
-                info.Renderer.materials = new[] {mat};
-                info.Renderer.shadowCastingMode = ShadowCastingMode.Off;
-                info.Renderer.receiveShadows = false;
-            }
-        });
+            yield return new WaitForEndOfFrame();
 
-        yield return StartCoroutine(TakeScreenshot(filename, $"_2_{targets.Count()}_{palletLoaded}"));
+            // 2. Label entire pallet with one material
+            foreach (var target in targets)
+            {
+                for (var i = 0; i < target.transform.childCount; i++)
+                {
+                    var child = target.transform.GetChild(i);
+                    var isBox = child.name.StartsWith(PalletInfo.Box.Prefix);
+                    if (child.name.StartsWith("Pallet.") && !isBox)
+                    {
+                        var r = child.GetComponent<Renderer>();
+                        targetObjects.Add(new GameObjectInfo {Material = new Material(r.material), Renderer = r, Child = child});
+
+                        r.material = null;
+                        r.materials = new[] {labelMaterial};
+                        r.shadowCastingMode = ShadowCastingMode.Off;
+                        r.receiveShadows = false;
+                    }
+                    // Hide non essential parts
+                    else if (target.transform.GetChild(i).name.Equals("Pallet"))
+                    {
+                        hiddenObjects.Add(child.gameObject);
+                        child.gameObject.SetActive(false);
+                    }
+                }
+            }
+
+            for (var i = 0; i < cams.Count; i++)
+            {
+                yield return StartCoroutine(TakeScreenshot(filename, $"_2_{palletLoaded}_cam{i}", cams[i]));
+            }
+        }
+
+
+        if (captureEachPart)
+        {
+            // 3. Label each part with different color
+            targetObjects.ForEach(info =>
+            {
+                var name = info.Child.name;
+                var isBox = info.Child.name.StartsWith(PalletInfo.Box.Prefix);
+                if (name.StartsWith("Pallet.") || isBox)
+                {
+                    info.Renderer.material = null;
+                    var mat = Instantiate(labelMaterial);
+                    mat.color = GetPartColor(info.Renderer.gameObject);
+                    info.Renderer.materials = new[] {mat};
+                    info.Renderer.shadowCastingMode = ShadowCastingMode.Off;
+                    info.Renderer.receiveShadows = false;
+                }
+            });
+            for (var i = 0; i < cams.Count; i++)
+            {
+                yield return StartCoroutine(TakeScreenshot(filename, $"_3_{palletLoaded}_cam{i}", cams[i]));
+            }
+        }
 
         // 4. Restore original materials and show hidden stuff
-        targetStates.ForEach(info =>
+        targetObjects.ForEach(info =>
         {
             info.Renderer.materials = new[] {new Material(info.Material)};
             info.Renderer.shadowCastingMode = ShadowCastingMode.On;
@@ -167,9 +245,8 @@ public class Screenshot : MonoBehaviour
             obj.SetActive(true);
         }
 
-        panel.gameObject.SetActive(true);
-        yield return new WaitForEndOfFrame();
-        targetStates.Clear();
+        // panel.gameObject.SetActive(true);
+        targetObjects.Clear();
     }
 
     /// <summary>
@@ -213,22 +290,25 @@ public class Screenshot : MonoBehaviour
     /// <param name="filename"></param>
     /// <param name="postfix"></param>
     /// <returns></returns>
-    private IEnumerator TakeScreenshot(string filename, string postfix)
+    private IEnumerator TakeScreenshot(string filename, string postfix, Camera cam)
     {
         yield return new WaitForEndOfFrame();
-        var rect = renderCamera.rect;
+        cam.Render();
+        var rect = cam.rect;
         var screenshot = new Texture2D((int) (Screen.width * rect.width), Screen.height, TextureFormat.RGB24, true);
         var cropLeft = Screen.width * rect.x;
         screenshot.ReadPixels(new Rect(cropLeft, 0, screenshot.width, Screen.height), 0, 0);
         screenshot.Apply();
 
-        var newScreenshot = new Texture2D(screenshot.width / 4, screenshot.height / 4);
-        newScreenshot.SetPixels(screenshot.GetPixels(2));
+        var newScreenshot = new Texture2D(screenshot.width, screenshot.height);
+        newScreenshot.SetPixels(screenshot.GetPixels());
         newScreenshot.Apply();
 
         byte[] bytes = newScreenshot.EncodeToJPG(90);
         var localUrl = _screenshotPath + "/" + filename + postfix + ".jpg";
         File.WriteAllBytes(localUrl, bytes);
+        Destroy(screenshot);
+        Destroy(newScreenshot);
     }
 
     private float _dT = 0;
