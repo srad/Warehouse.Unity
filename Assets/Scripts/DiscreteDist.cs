@@ -15,11 +15,11 @@ namespace Events
     /// Details please see: https://stackoverflow.com/questions/46735106/pick-random-element-from-list-with-probability
     /// </summary>
     /// <typeparam name="T"></typeparam>
-    public class Distribution<T> : List<Dist<T>>
+    public class DiscreteDist<T> : List<Dist<T>>
     {
         private List<Dist<T>> _sumProbabilities = new List<Dist<T>>();
 
-        public Distribution(IEnumerable<Dist<T>> elements)
+        public DiscreteDist(IEnumerable<Dist<T>> elements)
         {
             foreach (var e in elements)
             {
