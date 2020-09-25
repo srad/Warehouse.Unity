@@ -1,8 +1,11 @@
-﻿public enum PalletClass
+﻿namespace DefaultNamespace
 {
-    New,
-    ClassA,
-    ClassB,
-    ClassC,
-    Bad
+    public enum PalletClasses
+    {
+        New,
+        ClassA,
+        ClassB,
+        ClassC,
+        Bad
+    }
 }

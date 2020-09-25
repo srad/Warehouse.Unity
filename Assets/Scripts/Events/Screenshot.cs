@@ -124,7 +124,15 @@ public class Screenshot : MonoBehaviour
         var hiddenObjects = new List<GameObject>();
         var filename = ScreenshotPrefix;
         var targets = VisibleObjects();
-        string palletLoaded = "0"; //VisibleTargetObjects.First().transform.Find(PalletTags.Types.Load).tag;
+
+
+        var camObjects = VisibleTargetObjects(cams.First());
+        var gameObjects = camObjects.ToList();
+        var loadTag = "0";
+        if (gameObjects.Any())
+        {
+            loadTag = gameObjects.First().transform.Find(PalletTags.Types.Load).tag;
+        }
 
         // ------------------- Start Annotation -------------------
 
@@ -132,7 +140,7 @@ public class Screenshot : MonoBehaviour
         //panel.gameObject.SetActive(false);
         for (var i = 0; i < cams.Count; i++)
         {
-            yield return StartCoroutine(TakeScreenshot(filename, $"_0_{palletLoaded}_cam{i}", cams[i]));
+            yield return StartCoroutine(TakeScreenshot(filename, $"_0_{loadTag}_cam{i}", cams[i]));
         }
 
         // 1. Annotate front of pallet with a label
@@ -153,7 +161,7 @@ public class Screenshot : MonoBehaviour
 
         for (var i = 0; i < cams.Count; i++)
         {
-            yield return StartCoroutine(TakeScreenshot(filename, $"_1_{palletLoaded}_cam{i}", cams[i]));
+            yield return StartCoroutine(TakeScreenshot(filename, $"_1_{loadTag}_cam{i}", cams[i]));
         }
 
         // Hide front annotation again
@@ -204,7 +212,7 @@ public class Screenshot : MonoBehaviour
 
             for (var i = 0; i < cams.Count; i++)
             {
-                yield return StartCoroutine(TakeScreenshot(filename, $"_2_{palletLoaded}_cam{i}", cams[i]));
+                yield return StartCoroutine(TakeScreenshot(filename, $"_2_{loadTag}_cam{i}", cams[i]));
             }
         }
 
@@ -228,7 +236,7 @@ public class Screenshot : MonoBehaviour
             });
             for (var i = 0; i < cams.Count; i++)
             {
-                yield return StartCoroutine(TakeScreenshot(filename, $"_3_{palletLoaded}_cam{i}", cams[i]));
+                yield return StartCoroutine(TakeScreenshot(filename, $"_3_{loadTag}_cam{i}", cams[i]));
             }
         }
 

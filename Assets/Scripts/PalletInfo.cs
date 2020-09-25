@@ -19,6 +19,7 @@
             public const string Top = "Pallet.Plank.Top";
             public const string Middle = "Pallet.Plank.Middle";
             public const string Bottom = "Pallet.Plank.Bottom";
+            public const string Prefix = "Pallet.Plank.";
         }
 
         public static class Brick
