@@ -5,7 +5,6 @@ using DefaultNamespace;
 using UnityEngine;
 using UnityEngine.Experimental.Rendering;
 using UnityEngine.Rendering;
-using UnityEngine.UI;
 using Random = UnityEngine.Random;
 
 public class GenerateWarehouse : MonoBehaviour
@@ -22,13 +21,12 @@ public class GenerateWarehouse : MonoBehaviour
 
     [Header("Material Settings")] public Material basePalletMaterial;
 
-    public List<HistItem> histograms;
+    public List<TexSampleItem> textureSamples;
 
-    public List<Texture> plankNormalMaps = new List<Texture>();
-    public List<Texture> dirtTextures = new List<Texture>();
-    public List<Texture> brickNormalMaps = new List<Texture>();
-    public List<Color> woodColors = new List<Color>();
-    public float woodColorVariance = 0.5f;
+    public List<Texture2D> plankNormalMaps = new List<Texture2D>();
+    public List<Texture2D> dirtTextures = new List<Texture2D>();
+    public List<Texture2D> brickNormalMaps = new List<Texture2D>();
+    [Range(0f, 1f)] public float woodColorVariance = 0.5f;
 
     [Header("General Probabilities")] [Tooltip("P(Pallet Loaded at all"), Range(0f, 1f)]
     public float pLoaded = 0.8f;
@@ -68,10 +66,13 @@ public class GenerateWarehouse : MonoBehaviour
     public float xShelfOffset = 1.85f;
 
     public int zCount = 18;
-    public int zGroupSize = 6;
-    public float zGroupDistance = -0.8f;
+    //public int zGroupSize = 6;
+    //public float zGroupDistance = -0.8f;
     public float zOffset = -1.6f;
-    public float zShelfOffset = 11f;
+    //public float zShelfOffset = 11f;
+
+    public int xLightCount = 10;
+    public float xLightDistance = 6f;
 
     public int yGroupCount = 4;
 
@@ -83,18 +84,18 @@ public class GenerateWarehouse : MonoBehaviour
 
     private Distributions _dists;
 
-    private List<GameObject> _lightRows = new List<GameObject>();
-
     private GameObject CreatePallet(Vector3 pos, bool load = false)
     {
-        var p = Instantiate(pallet, transform.parent);
-        p.transform.position = pos;
+        // Add uncertainty
+        pos.x += Random.Range(-xRange, xRange);
+        pos.z += Random.Range(-zRange, zRange);
+
+        var p = Instantiate(pallet, pallet.transform.parent);
+        p.transform.Translate(pos, Space.World);
         p.tag = "pallet";
 
         // Basic variations
         p.transform.Rotate(Vector3.up, Random.Range(-palletRotation, palletRotation));
-        p.transform.Translate(Random.Range(-xRange, xRange), 0f, 0f);
-        p.transform.Translate(0f, 0f, Random.Range(-zRange, zRange));
 
         // Initial tags
         p.transform.Find(PalletTags.Types.PalletType).tag = PalletTags.Pallet.Type1;
@@ -111,13 +112,13 @@ public class GenerateWarehouse : MonoBehaviour
     {
         _dists = new Distributions(new DistParams
         {
-            hists = histograms.Select(h => new HistInfo(hist: JsonUtility.FromJson<Hist>(h.file.text), p: h.p)).ToList(),
-            basePalletMaterial = basePalletMaterial,
-            plankNormalMaps = plankNormalMaps,
-            dirtTextures = dirtTextures,
-            brickNormalMaps = brickNormalMaps,
-            woodColors = woodColors,
-            woodColorVariance = woodColorVariance,
+            Hists = textureSamples.Select(h => new HistInfo(h)).ToList(),
+            //Hists = histograms.Select(h => new HistInfo(hist: JsonUtility.FromJson<Hist>(h.file.text), p: h.p)).ToList(),
+            BasePalletMaterial = basePalletMaterial,
+            PlankNormalMaps = plankNormalMaps,
+            DirtTextures = dirtTextures,
+            BrickNormalMaps = brickNormalMaps,
+            WoodColorVariance = woodColorVariance,
         });
 
         Screen.SetResolution(1024, 768, false);
@@ -125,12 +126,14 @@ public class GenerateWarehouse : MonoBehaviour
         Generate();
     }
 
+    /// <summary>
+    /// This method only destroy the dynamically generated game object, not the foundation of the warehouse.
+    /// </summary>
     private void DestroyScene()
     {
         _probe.Clear();
         var objs = GameObject.FindGameObjectsWithTag("pallet")
-            .Concat(GameObject.FindGameObjectsWithTag("shelf"))
-            .Concat(GameObject.FindGameObjectsWithTag("light"));
+            .Concat(GameObject.FindGameObjectsWithTag("shelf"));
 
         foreach (var obj in objs)
         {
@@ -139,22 +142,42 @@ public class GenerateWarehouse : MonoBehaviour
         }
     }
 
+    private void AddLights()
+    {
+        for (var x = 1; x <= xLightCount; x++)
+        {
+            var lightRow = Instantiate(lights, lights.transform, lights.transform.parent);
+            lightRow.transform.Translate(xLightDistance * x, 0, 0, Space.World);
+            lightRow.tag = "light";
+        }
+    }
+
     public void Generate()
     {
         DestroyScene();
+        
+        //AddLights();
 
         shelf.SetActive(true);
         pallet.SetActive(true);
 
-        var start = pallet.transform.position;
-        var xPosition = start.x;
-        var xPositionShelf = shelf.transform.position.x;
+        //var start = pallet.transform.position;
+        //var xPositionShelf = shelf.transform.position.x;
 
         // x direction
+        var gap = 0f;
         for (var x = 0; x < xCount; x++)
         {
-            var zPosition = start.z;
-            var zPositionShelf = shelf.transform.position.z;
+            if (x == 1 || (x > 1 && x % xGroupSize == 1))
+            {
+                gap += xGroupDistance;
+            }
+
+            var xPosition = x * xShelfOffset + gap;
+
+            var newShelf = Instantiate(shelf, shelf.transform.parent);
+            shelf.tag = "shelf";
+            newShelf.transform.Translate(xPosition, 0, 0, Space.World);
 
             // -z Direction
             for (var z = 0; z < zCount; z++)
@@ -174,7 +197,7 @@ public class GenerateWarehouse : MonoBehaviour
                     // Load variation: <small random rotation> + 90° rotation
                     var rot = loadPallet ? Random.Range(-5f, 5f) + (Random.Range(0f, 1f) < 0.5f ? -90 : 0) : 0;
 
-                    var newPallet = CreatePallet(new Vector3(xPosition, start.y + y * 2.6f, zPosition), loadPallet);
+                    var newPallet = CreatePallet(new Vector3(xPosition, y * 2.6f, -z * zOffset), loadPallet);
 
                     // Assign the height to the object
                     // Sample: always returns > 0
@@ -188,32 +211,26 @@ public class GenerateWarehouse : MonoBehaviour
                     // Each run, the brick surface structure is determined for all bricks.
                     // There are no pallet with different kind of brick.
 
-                    var pClass = _dists.PalletClass.Sample();
+                    //var pClass = _dists.PalletClass.Sample();
                     //var dirtClass = pClass == PalletClasses.ClassB || pClass == PalletClasses.ClassC || pClass == PalletClasses.Bad;
                     var isDirty = Random.Range(0f, 1f) < pApplyDirt && Random.Range(0f, 1f) < 0.5f;
-                    var tex = _dists.PalletTexture.Sample();
-                    var surface = new SurfaceInfo {Tex = tex, IsDirty = isDirty};
+                    var surface = new MaterialInfo {WoodColorVariance = woodColorVariance};
+                    var tex = _dists.PalletTextureProducer.Sample(surface);
+                    surface.Tex = tex;
+                    surface.IsDirty = isDirty;
 
-                    for (var j = 0; j < newPallet.transform.childCount; j++)
+                    for (var childIdx = 0; childIdx < newPallet.transform.childCount; childIdx++)
                     {
-                        var child = newPallet.transform.GetChild(j);
+                        var child = newPallet.transform.GetChild(childIdx);
                         //var woodenPart = child.name.StartsWith(PalletInfo.Plank.Prefix) || child.name.StartsWith("Pallet.");
 
                         if (child.name.StartsWith("Pallet."))
                         {
-                            var palletMaterial = _dists.PalletMaterial.Sample(surface);
+                            var palletMaterial = _dists.PalletMaterialProducer.Sample(surface);
 
                             var ren = child.GetComponent<Renderer>();
                             ren.rayTracingMode = RayTracingMode.Static;
                             ren.shadowCastingMode = ShadowCastingMode.On;
-
-                            //if (woodenPart && isDirty)
-                            //{
-                            //    palletMaterial.SetTexture("_BaseColorMap", dirt);
-                            //    var tile = Random.Range(.4f, .6f);
-                            //    palletMaterial.SetTextureScale("_BaseColorMap", new Vector2(tile, tile));
-                            //    palletMaterial.SetTextureOffset("_NormalMap", new Vector2(Random.Range(-100f, 100f), Random.Range(-100f, 100f)));
-                            //}
 
                             // Damage
                             if (makeDamage)
@@ -259,7 +276,7 @@ public class GenerateWarehouse : MonoBehaviour
                             }
                             else if (child.name.StartsWith(PalletInfo.Brick.Prefix))
                             {
-                                var brickMaterial = _dists.BrickMaterial.Sample(surface);
+                                var brickMaterial = _dists.BrickMaterialProducer.Sample(surface);
                                 ren.materials = brickMaterial;
                             }
                         }
@@ -291,54 +308,12 @@ public class GenerateWarehouse : MonoBehaviour
                     if (damageCount > 0)
                     {
                         newPallet.transform.Find(PalletTags.Types.Damage).tag = PalletTags.Damaged;
-                        // TODO: Move to correct position in the distribution sampler
-                        /*
-                        // Apply darkening to damaged pallets
-                        for (var j = 0; j < newPallet.transform.childCount; j++)
-                        {
-                            var child = newPallet.transform.GetChild(j);
-                            if (child.name.StartsWith("Pallet."))
-                            {
-                                var childMat = child.GetComponent<Renderer>().material;
-                                // Linearly darken with the number of damages
-                                var factor = Mathf.Max(0f, 1f - damageCount / 10f);
-                                var c = new Color(childMat.color.r * factor, childMat.color.g * factor, childMat.color.b * factor);
-                                material.SetColor("_BaseColor", c);
-                            }
-                        }
-                        */
                     }
                 }
-
-                zPosition += zOffset;
-                if (z > 0 && z % (zGroupSize + 1) == 0)
-                {
-                    var newShelf = Instantiate(shelf, transform.parent);
-                    shelf.tag = "shelf";
-                    newShelf.transform.position = new Vector3(xPositionShelf, shelf.transform.position.y, zPositionShelf);
-
-                    zPositionShelf -= zShelfOffset;
-                    zPosition += zGroupDistance;
-
-                    if (x % 2 == 0)
-                    {
-                        var lightRow = Instantiate(lights, lights.transform, lights.transform.parent);
-                        lightRow.transform.Translate(xOffset * x, 0, 0, Space.Self);
-                        lightRow.tag = "light";
-                    }
-                }
-            }
-
-            xPosition += xOffset;
-            xPositionShelf += xShelfOffset;
-            if (x % xGroupSize == 0)
-            {
-                xPositionShelf += xGroupDistance;
-                xPosition += xGroupDistance;
             }
         }
 
-        //shelf.SetActive(false);
+        shelf.SetActive(false);
         pallet.SetActive(false);
     }
 }
