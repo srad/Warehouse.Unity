@@ -22,7 +22,6 @@ public class Screenshot : MonoBehaviour
     public Volume volume;
 
     private CollisionProbe _forkliftProbe;
-    private GrayScale _gray;
 
     public GameObject frontLabel;
     //[Header("Settings")] public bool useCollisionProbeInsteadAllVisiblePallet = true;
@@ -54,8 +53,8 @@ public class Screenshot : MonoBehaviour
 
     #region Private
 
-    private string _screenshotPath;
-    private static string ScreenshotPrefix => Guid.NewGuid().ToString();
+    public static string ScreenshotPath => Path.Combine(Application.dataPath, "..", "Screenshots");
+    public static string ScreenshotPrefix => Guid.NewGuid().ToString();
 
     /// <summary>
     /// Either take the object which do collide with the collisionProbe geometry in front of
@@ -93,13 +92,11 @@ public class Screenshot : MonoBehaviour
     /// </summary>
     private void Start()
     {
-        _screenshotPath = Path.Combine(Application.dataPath, "..", "Screenshots");
-        if (!Directory.Exists(_screenshotPath))
+        if (!Directory.Exists(ScreenshotPath))
         {
-            Directory.CreateDirectory(_screenshotPath);
+            Directory.CreateDirectory(ScreenshotPath);
         }
 
-        volume.profile.TryGet(out _gray);
         _forkliftProbe = forkLift.transform.Find("CollisionProbe").GetComponent<CollisionProbe>();
         _generator = GameObject.Find("Warehouse").GetComponent<GenerateWarehouse>();
     }
@@ -298,7 +295,7 @@ public class Screenshot : MonoBehaviour
     /// <param name="filename"></param>
     /// <param name="postfix"></param>
     /// <returns></returns>
-    private IEnumerator TakeScreenshot(string filename, string postfix, Camera cam)
+    public static IEnumerator TakeScreenshot(string filename, string postfix, Camera cam)
     {
         yield return new WaitForEndOfFrame();
         cam.Render();
@@ -312,8 +309,8 @@ public class Screenshot : MonoBehaviour
         newScreenshot.SetPixels(screenshot.GetPixels());
         newScreenshot.Apply();
 
-        byte[] bytes = newScreenshot.EncodeToJPG(90);
-        var localUrl = _screenshotPath + "/" + filename + postfix + ".jpg";
+        byte[] bytes = newScreenshot.EncodeToPNG();
+        var localUrl = Path.Combine(ScreenshotPath, filename + postfix + ".png");
         File.WriteAllBytes(localUrl, bytes);
         Destroy(screenshot);
         Destroy(newScreenshot);

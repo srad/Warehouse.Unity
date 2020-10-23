@@ -93,6 +93,7 @@ public class Distributions
         {
             Generator = matInfo =>
             {
+                var scale = Random.Range(8f, 15f);
                 var materials = new List<Material>
                 {
                     WoodMaterialProducer.Sample(new WoodMaterialInfo
@@ -100,8 +101,8 @@ public class Distributions
                         MaterialInfo = matInfo,
                         NormalMap = PlankNormalMaps.Sample(),
                         NormalMapOffsetRange = new Vector4(-200f, 200f, -200f, 200f),
-                        TextureScale = new Vector2(10f, 10f),
-                        NormalMapScaleRange = new Vector2(0.1f, 3.5f)
+                        TextureScale = new Vector2(scale, scale),
+                        NormalMapScaleRange = new Vector2(1f, 5f)
                     })
                 };
 
@@ -126,7 +127,7 @@ public class Distributions
                         NormalMap = BrickNormalMaps.Sample(),
                         NormalMapOffsetRange = new Vector4(-50, 50f, -100f, 100f),
                         NormalMapScaleRange = new Vector2(0.1f, 0.7f),
-                        TextureScale = new Vector2(7f, 7f),
+                        TextureScale = new Vector2(20f, 20f),
                     })
                 };
 
@@ -157,14 +158,15 @@ public class Distributions
 
                 for (int y = 0; y < tex.height; y++)
                 {
+                    var colors = new Color[tex.width];
                     for (int x = 0; x < tex.width; x++)
                     {
                         // Color sampling
                         var sample = hist.Sample();
-                        var var = Random.Range(0f, surface.WoodColorVariance);
-                        var color = Color.Lerp(new Color(sample.R / 255f, sample.G / 255f, sample.B / 255f), Color.black, var);
-                        tex.SetPixel(x, y, color);
+                        var var = Random.Range(surface.WoodColorVariance, 1f);
+                        colors[x] = Color.Lerp(new Color(sample.R / 255f, sample.G / 255f, sample.B / 255f), Color.black, var);
                     }
+                    tex.SetPixels(0, y, colors.Length, 1, colors);
                 }
 
                 //var path = Path.Combine(Application.dataPath, "Textures", "Test", "tex_" + idx + ".png");
@@ -178,7 +180,7 @@ public class Distributions
         };
 
         PlankNormalMaps = new DiscreteDist<Texture2D>(
-            _params.BrickNormalMaps
+            _params.PlankNormalMaps
                 .Select(map => new Discrete<Texture2D> {Element = map, P = 1f / _params.PlankNormalMaps.Count})
                 .ToArray());
 

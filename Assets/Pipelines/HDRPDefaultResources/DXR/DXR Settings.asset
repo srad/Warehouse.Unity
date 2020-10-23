@@ -164,6 +164,25 @@ MonoBehaviour:
     m_Value: 2
     min: 1
     max: 6
+--- !u!114 &-4553711057089860651
+MonoBehaviour:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9de2ce6a8ea9989428edb49c2c01db22, type: 3}
+  m_Name: AnnotationPostProcess
+  m_EditorClassIdentifier: 
+  active: 1
+  m_AdvancedMode: 0
+  intensity:
+    m_OverrideState: 1
+    m_Value: 1
+    min: 0
+    max: 1
 --- !u!114 &-4390931173211943611
 MonoBehaviour:
   m_ObjectHideFlags: 3
@@ -317,6 +336,7 @@ MonoBehaviour:
   - {fileID: -3253880180865548642}
   - {fileID: 2604648052857351226}
   - {fileID: 3638906623586716685}
+  - {fileID: -4553711057089860651}
 --- !u!114 &2051066165160933880
 MonoBehaviour:
   m_ObjectHideFlags: 3

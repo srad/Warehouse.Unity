@@ -29,6 +29,7 @@ TagManager:
   - load.1
   - load.0
   - light
+  - annotation
   layers:
   - Default
   - TransparentFX

@@ -66,6 +66,7 @@ public class GenerateWarehouse : MonoBehaviour
     public float xShelfOffset = 1.85f;
 
     public int zCount = 18;
+
     //public int zGroupSize = 6;
     //public float zGroupDistance = -0.8f;
     public float zOffset = -1.6f;
@@ -84,7 +85,7 @@ public class GenerateWarehouse : MonoBehaviour
 
     private Distributions _dists;
 
-    private GameObject CreatePallet(Vector3 pos, bool load = false)
+    private GameObject CreatePallet(Vector3 index, Vector3 pos, bool load = false)
     {
         // Add uncertainty
         pos.x += Random.Range(-xRange, xRange);
@@ -96,6 +97,11 @@ public class GenerateWarehouse : MonoBehaviour
 
         // Basic variations
         p.transform.Rotate(Vector3.up, Random.Range(-palletRotation, palletRotation));
+
+        var anno = p.transform.Find("Annotation");
+        anno.tag = "annotation";
+        anno.GetComponent<MeshRenderer>().enabled = false;
+        anno.GetComponent<Renderer>().material.SetColor("_UnlitColor",  index.z % 2 == 0 ? Color.red : Color.white);
 
         // Initial tags
         p.transform.Find(PalletTags.Types.PalletType).tag = PalletTags.Pallet.Type1;
@@ -142,20 +148,10 @@ public class GenerateWarehouse : MonoBehaviour
         }
     }
 
-    private void AddLights()
-    {
-        for (var x = 1; x <= xLightCount; x++)
-        {
-            var lightRow = Instantiate(lights, lights.transform, lights.transform.parent);
-            lightRow.transform.Translate(xLightDistance * x, 0, 0, Space.World);
-            lightRow.tag = "light";
-        }
-    }
-
     public void Generate()
     {
         DestroyScene();
-        
+
         //AddLights();
 
         shelf.SetActive(true);
@@ -176,7 +172,7 @@ public class GenerateWarehouse : MonoBehaviour
             var xPosition = x * xShelfOffset + gap;
 
             var newShelf = Instantiate(shelf, shelf.transform.parent);
-            shelf.tag = "shelf";
+            newShelf.tag = "shelf";
             newShelf.transform.Translate(xPosition, 0, 0, Space.World);
 
             // -z Direction
@@ -197,7 +193,7 @@ public class GenerateWarehouse : MonoBehaviour
                     // Load variation: <small random rotation> + 90° rotation
                     var rot = loadPallet ? Random.Range(-5f, 5f) + (Random.Range(0f, 1f) < 0.5f ? -90 : 0) : 0;
 
-                    var newPallet = CreatePallet(new Vector3(xPosition, y * 2.6f, -z * zOffset), loadPallet);
+                    var newPallet = CreatePallet(new Vector3(x, y, z), new Vector3(xPosition, y * 2.6f, -z * zOffset), loadPallet);
 
                     // Assign the height to the object
                     // Sample: always returns > 0
@@ -315,5 +311,13 @@ public class GenerateWarehouse : MonoBehaviour
 
         shelf.SetActive(false);
         pallet.SetActive(false);
+    }
+
+    private void Update()
+    {
+        if (Input.GetKeyDown(KeyCode.G))
+        {
+            Generate();
+        }
     }
 }
