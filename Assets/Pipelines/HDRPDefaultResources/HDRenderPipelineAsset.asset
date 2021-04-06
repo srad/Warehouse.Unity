@@ -212,14 +212,14 @@ MonoBehaviour:
     colorBufferFormat: 74
     supportCustomPass: 1
     customBufferFormat: 12
-    supportedLitShaderMode: 2
+    supportedLitShaderMode: 1
     supportDecals: 1
     msaaSampleCount: 1
     supportMotionVectors: 1
     supportRuntimeDebugDisplay: 1
     supportDitheringCrossFade: 1
     supportTerrainHole: 0
-    supportRayTracing: 1
+    supportRayTracing: 0
     lightLoopSettings:
       cookieAtlasSize: 2048
       cookieFormat: 74
