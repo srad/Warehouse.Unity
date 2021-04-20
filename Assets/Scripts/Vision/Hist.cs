@@ -1,13 +1,14 @@
 ﻿using System.Linq;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace DefaultNamespace
 {
     [System.Serializable]
-    public class TexSampleItem
+    public class MaterialSample<T>
     {
         //public TextAsset file;
-        public Texture2D tex;
+        public T sample;
         public float p;
     }
 
@@ -33,9 +34,9 @@ namespace DefaultNamespace
         private readonly DiscreteDist<int> _distG;
         private DiscreteDist<int> _distR;
 
-        public HistInfo(TexSampleItem texSampleItem)
+        public HistInfo(MaterialSample<Texture2D> texSampleItem)
         {
-            _hist = CreateHist(texSampleItem.tex);
+            _hist = CreateHist(texSampleItem.sample);
             P = texSampleItem.p;
 
             _distB = new DiscreteDist<int>(

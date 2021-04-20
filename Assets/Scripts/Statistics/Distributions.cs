@@ -17,6 +17,7 @@ public class Distributions
     public DistProduceWith<Material[], MaterialInfo> BrickMaterialProducer;
     public DiscreteDist<PalletClasses> PalletClass;
     public DiscreteDist<HistInfo> Hists;
+    public DiscreteDist<Color> BaseColors;
     public DistProduceWith<Texture2D, MaterialInfo> PalletTextureProducer;
     public DistProducer<Material> SurfaceDamageMaterialProducer;
     public DistProduceWith<Material, WoodMaterialInfo> WoodMaterialProducer;
@@ -53,15 +54,25 @@ public class Distributions
             Generator = surface =>
             {
                 var mat = new Material(_params.BasePalletMaterial);
+                if (_params.UseTextureSamples)
+                {
+                    mat.SetTexture("_BaseColorMap", surface.MaterialInfo.Tex);
+                    mat.SetTextureScale("_BaseColorMap", new Vector2(surface.TextureScale.x, surface.TextureScale.y));
+                }
+                else
+                {
+                    mat.SetColor("_BaseColor", surface.MaterialInfo.BaseColor);
+                }
 
                 mat.SetTexture("_NormalMap", PlankNormalMaps.Sample());
-                mat.SetTexture("_BaseColorMap", surface.MaterialInfo.Tex);
                 mat.SetFloat("_Smoothness", 0f);
-                mat.SetTextureOffset("_NormalMap", new Vector2(Random.Range(surface.NormalMapOffsetRange.x, surface.NormalMapOffsetRange.y), Random.Range(surface.NormalMapOffsetRange.z, surface.NormalMapOffsetRange.w)));
-                mat.SetFloat("_NormalScale", Random.Range(surface.NormalMapScaleRange.x, surface.NormalMapScaleRange.y));
+                mat.SetTextureOffset("_NormalMap",
+                    new Vector2(Random.Range(surface.NormalMapOffsetRange.x, surface.NormalMapOffsetRange.y),
+                        Random.Range(surface.NormalMapOffsetRange.z, surface.NormalMapOffsetRange.w)));
+                mat.SetFloat("_NormalScale",
+                    Random.Range(surface.NormalMapScaleRange.x, surface.NormalMapScaleRange.y));
                 mat.EnableKeyword("_NORMALMAP");
                 mat.EnableKeyword("_NORMALMAP_TANGENT_SPACE");
-                mat.SetTextureScale("_BaseColorMap", new Vector2(surface.TextureScale.x, surface.TextureScale.y));
 
                 return mat;
             }
@@ -94,7 +105,7 @@ public class Distributions
             Generator = matInfo =>
             {
                 //var scale = Random.Range(60f, 100f);
-                var scale = 100f;
+                const float scale = 1f;
                 var materials = new List<Material>
                 {
                     WoodMaterialProducer.Sample(new WoodMaterialInfo
@@ -107,6 +118,7 @@ public class Distributions
                     })
                 };
 
+                // Dirt texture can be stacked on top of existing textures.
                 if (matInfo.IsDirty)
                 {
                     materials.Add(SurfaceDamageMaterialProducer.Sample());
@@ -141,11 +153,15 @@ public class Distributions
             }
         };
 
+        BaseColors = new DiscreteDist<Color>(
+            _params.BaseColors
+                .Select(c => new Discrete<Color> {Element = c.sample, P = c.p})
+                .ToArray());
+
         Hists = new DiscreteDist<HistInfo>(
             _params.Hists
                 .Select(hi => new Discrete<HistInfo> {Element = hi, P = hi.P})
                 .ToArray());
-
 
         PalletTextureProducer = new DistProduceWith<Texture2D, MaterialInfo>
         {
@@ -165,8 +181,10 @@ public class Distributions
                         // Color sampling
                         var sample = hist.Sample();
                         var var = Random.Range(surface.WoodColorVariance, 1f);
-                        colors[x] = Color.Lerp(new Color(sample.R / 255f, sample.G / 255f, sample.B / 255f), Color.black, var);
+                        colors[x] = Color.Lerp(new Color(sample.R / 255f, sample.G / 255f, sample.B / 255f),
+                            Color.black, var);
                     }
+
                     tex.SetPixels(0, y, colors.Length, 1, colors);
                 }
 

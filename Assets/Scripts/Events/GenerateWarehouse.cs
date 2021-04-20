@@ -21,7 +21,11 @@ public class GenerateWarehouse : MonoBehaviour
 
     [Header("Material Settings")] public Material basePalletMaterial;
 
-    public List<TexSampleItem> textureSamples;
+    public bool useTextureSamples = false;
+
+    public List<MaterialSample<Color>> colorSamples = new List<MaterialSample<Color>>();
+
+    public List<MaterialSample<Texture2D>> textureSamples;
 
     public List<Texture2D> plankNormalMaps = new List<Texture2D>();
     public List<Texture2D> dirtTextures = new List<Texture2D>();
@@ -102,7 +106,7 @@ public class GenerateWarehouse : MonoBehaviour
         var anno = p.transform.Find("Annotation");
         anno.tag = "annotation";
         anno.GetComponent<MeshRenderer>().enabled = false;
-        anno.GetComponent<Renderer>().material.SetColor("_UnlitColor",  index.z % 2 == 0 ? Color.red : Color.white);
+        anno.GetComponent<Renderer>().material.SetColor("_UnlitColor", index.z % 2 == 0 ? Color.red : Color.white);
 
         // Initial tags
         p.transform.Find(PalletTags.Types.PalletType).tag = PalletTags.Pallet.Type1;
@@ -119,8 +123,9 @@ public class GenerateWarehouse : MonoBehaviour
     {
         _dists = new Distributions(new DistParams
         {
+            UseTextureSamples = useTextureSamples,
             Hists = textureSamples.Select(h => new HistInfo(h)).ToList(),
-            //Hists = histograms.Select(h => new HistInfo(hist: JsonUtility.FromJson<Hist>(h.file.text), p: h.p)).ToList(),
+            BaseColors = colorSamples,
             BasePalletMaterial = basePalletMaterial,
             PlankNormalMaps = plankNormalMaps,
             DirtTextures = dirtTextures,
@@ -219,9 +224,19 @@ public class GenerateWarehouse : MonoBehaviour
                     //var pClass = _dists.PalletClass.Sample();
                     //var dirtClass = pClass == PalletClasses.ClassB || pClass == PalletClasses.ClassC || pClass == PalletClasses.Bad;
                     var isDirty = Random.Range(0f, 1f) < pApplyDirt && Random.Range(0f, 1f) < 0.5f;
-                    var surface = new MaterialInfo {WoodColorVariance = woodColorVariance};
-                    var tex = _dists.PalletTextureProducer.Sample(surface);
-                    surface.Tex = tex;
+                    var surface = new MaterialInfo {WoodColorVariance = woodColorVariance, UseTexture = useTextureSamples};
+
+                    // Generate for all pallet parts only one type of material.
+                    if (useTextureSamples)
+                    {
+                        var tex = _dists.PalletTextureProducer.Sample(surface);
+                        surface.Tex = tex;
+                    }
+                    else
+                    {
+                        surface.BaseColor = _dists.BaseColors.Sample();
+                    }
+
                     surface.IsDirty = isDirty;
 
                     for (var childIdx = 0; childIdx < newPallet.transform.childCount; childIdx++)
