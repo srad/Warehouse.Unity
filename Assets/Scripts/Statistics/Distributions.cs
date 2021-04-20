@@ -93,7 +93,8 @@ public class Distributions
         {
             Generator = matInfo =>
             {
-                var scale = Random.Range(8f, 15f);
+                //var scale = Random.Range(60f, 100f);
+                var scale = 100f;
                 var materials = new List<Material>
                 {
                     WoodMaterialProducer.Sample(new WoodMaterialInfo

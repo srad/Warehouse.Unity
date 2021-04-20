@@ -76,6 +76,7 @@ public class GenerateWarehouse : MonoBehaviour
     public float xLightDistance = 6f;
 
     public int yGroupCount = 4;
+    public bool palleteStack = false;
 
     [Header("Pallet Variations")] [Range(0f, 90f)]
     public float palletRotation = 8f;
@@ -161,6 +162,7 @@ public class GenerateWarehouse : MonoBehaviour
         //var xPositionShelf = shelf.transform.position.x;
 
         // x direction
+
         var gap = 0f;
         for (var x = 0; x < xCount; x++)
         {
@@ -181,6 +183,13 @@ public class GenerateWarehouse : MonoBehaviour
                 // Up
                 for (var y = 0; y < yGroupCount; y++)
                 {
+                    var yPosition = y * 2.6f;
+
+                    if (palleteStack)
+                    {
+                        yPosition = y * 1.4f;
+                    }
+
                     var skipPallet = missingPallets && (Random.Range(0f, 1f) < pPalletMissing);
                     if (skipPallet)
                     {
@@ -193,7 +202,7 @@ public class GenerateWarehouse : MonoBehaviour
                     // Load variation: <small random rotation> + 90° rotation
                     var rot = loadPallet ? Random.Range(-5f, 5f) + (Random.Range(0f, 1f) < 0.5f ? -90 : 0) : 0;
 
-                    var newPallet = CreatePallet(new Vector3(x, y, z), new Vector3(xPosition, y * 2.6f, -z * zOffset), loadPallet);
+                    var newPallet = CreatePallet(new Vector3(x, y, z), new Vector3(xPosition, yPosition, -z * zOffset), loadPallet);
 
                     // Assign the height to the object
                     // Sample: always returns > 0
