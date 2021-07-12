@@ -30,6 +30,7 @@ TagManager:
   - load.0
   - light
   - annotation
+  - pallet_part
   layers:
   - Default
   - TransparentFX

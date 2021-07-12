@@ -72,7 +72,7 @@
     },
     "com.unity.nuget.newtonsoft-json": {
       "version": "2.0.0-preview",
-      "depth": 3,
+      "depth": 2,
       "source": "registry",
       "dependencies": {},
       "url": "https://packages.unity.com"
@@ -184,11 +184,11 @@
       "url": "https://packages.unity.com"
     },
     "com.unity.simulation.capture": {
-      "version": "0.0.10-preview.20",
-      "depth": 1,
+      "version": "0.0.10-preview.23",
+      "depth": 0,
       "source": "registry",
       "dependencies": {
-        "com.unity.simulation.core": "0.0.10-preview.22"
+        "com.unity.simulation.core": "0.0.10-preview.25"
       },
       "url": "https://packages.unity.com"
     },
@@ -200,10 +200,12 @@
       "url": "https://packages.unity.com"
     },
     "com.unity.simulation.core": {
-      "version": "0.0.10-preview.22",
+      "version": "0.0.10-preview.25",
       "depth": 1,
       "source": "registry",
-      "dependencies": {},
+      "dependencies": {
+        "com.unity.nuget.newtonsoft-json": "2.0.0-preview"
+      },
       "url": "https://packages.unity.com"
     },
     "com.unity.test-framework": {

@@ -61,7 +61,7 @@ public class Screenshot : MonoBehaviour
     /// the forklift, or take all visible pallets. First one is preferred for annotations.
     /// TODO: Change to ray casting from camera into scene, if only the front pallet shall be recognized
     /// </summary>
-    private IEnumerable<GameObject> TargetObjects => true
+    private IEnumerable<GameObject> TargetObjects => false
         ? _forkliftProbe.Pallets
         : GameObject.FindGameObjectsWithTag(TargetTag);
 
@@ -125,6 +125,7 @@ public class Screenshot : MonoBehaviour
 
         var camObjects = VisibleTargetObjects(cams.First());
         var gameObjects = camObjects.ToList();
+        Debug.Log("GameObjects count: " + gameObjects.Count);
         var loadTag = "0";
         if (gameObjects.Any())
         {
@@ -207,6 +208,7 @@ public class Screenshot : MonoBehaviour
                 }
             }
 
+
             for (var i = 0; i < cams.Count; i++)
             {
                 yield return StartCoroutine(TakeScreenshot(filename, $"_2_{loadTag}_cam{i}", cams[i]));
@@ -217,6 +219,7 @@ public class Screenshot : MonoBehaviour
         if (captureEachPart)
         {
             // 3. Label each part with different color
+            Debug.Log("TargetObjects count: " + targetObjects.Count);
             targetObjects.ForEach(info =>
             {
                 var name = info.Child.name;
